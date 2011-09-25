@@ -1,46 +1,47 @@
 //#condition polish.usePolishGui && polish.android
 package de.enough.polish.android.lcdui;
 
-import android.app.Dialog;
+import java.util.HashMap;
+
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.os.Looper;
-import android.os.Parcelable;
+import android.graphics.Rect;
+import android.graphics.Region.Op;
 import android.view.KeyEvent;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.View.OnTouchListener;
+import android.view.ViewGroup;
+import android.view.ViewParent;
 import de.enough.polish.android.midlet.MIDlet;
 import de.enough.polish.android.midlet.MidletBridge;
+import de.enough.polish.ui.Alert;
+import de.enough.polish.ui.AlertType;
+import de.enough.polish.ui.Command;
 import de.enough.polish.ui.Container;
 import de.enough.polish.ui.Display;
 import de.enough.polish.ui.Displayable;
 import de.enough.polish.ui.Item;
 import de.enough.polish.ui.NativeDisplay;
 import de.enough.polish.ui.Screen;
+import de.enough.polish.ui.ScreenChangeAnimation;
+import de.enough.polish.ui.TextField;
 import de.enough.polish.util.ArrayList;
-
-//#if polish.javaplatform >= Android/1.5
-	import android.view.inputmethod.BaseInputConnection;
-	import android.view.inputmethod.CompletionInfo;
-	import android.view.inputmethod.EditorInfo;
-	import android.view.inputmethod.InputConnection;
-//#endif
+import de.enough.polish.util.IdentityArrayList;
 
 /**
  * <code>Display</code> represents the manager of the display and input
  * devices of the system. It includes methods for retrieving properties of the
  * device and for requesting that objects be displayed on the device. Other
  * methods that deal with device attributes are primarily used with <A
- * HREF="../../../javax/microedition/lcdui/Canvas.html"><CODE>Canvas</CODE></A>
+ * HREF="Canvas.html"><CODE>Canvas</CODE></A>
  * objects and are thus defined there instead of here.
  * <p>
  * 
  * There is exactly one instance of Display per <A
- * HREF="../../../javax/microedition/midlet/MIDlet.html"><CODE>MIDlet</CODE></A>
+ * HREF="../midlet/MIDlet.html"><CODE>MIDlet</CODE></A>
  * and the application can get a reference to that instance by calling the <A
- * HREF="../../../javax/microedition/lcdui/Display.html#getDisplay(javax.microedition.midlet.MIDlet)"><CODE>getDisplay()</CODE></A>
+ * HREF="Display.html#getDisplay(javax.microedition.midlet.MIDlet)"><CODE>getDisplay()</CODE></A>
  * method. The application may call the <code>getDisplay()</code> method at
  * any time during course of its execution. The <code>Display</code> object
  * returned by all calls to <code>getDisplay()</code> will remain the same
@@ -53,7 +54,7 @@ import de.enough.polish.util.ArrayList;
  * <LI><STRONG>startApp</STRONG> - the application is moving from the paused
  * state to the active state. Initialization of objects needed while the
  * application is active should be done. The application may call <A
- * HREF="../../../javax/microedition/lcdui/Display.html#setCurrent(javax.microedition.lcdui.Displayable)"><CODE>setCurrent()</CODE></A>
+ * HREF="Display.html#setCurrent(javax.microedition.lcdui.Displayable)"><CODE>setCurrent()</CODE></A>
  * for the first screen if that has not already been done. Note that
  * <code>startApp()</code> can be called several times if
  * <code>pauseApp()</code> has been called in between. This means that
@@ -70,7 +71,7 @@ import de.enough.polish.util.ArrayList;
  * 
  * <P>
  * The user interface objects that are shown on the display device are contained
- * within a <A HREF="../../../javax/microedition/lcdui/Displayable.html"><CODE>Displayable</CODE></A>
+ * within a <A HREF="Displayable.html"><CODE>Displayable</CODE></A>
  * object. At any time the application may have at most one
  * <code>Displayable</code> object that it intends to be shown on the display
  * device and through which user interaction occurs. This
@@ -80,9 +81,9 @@ import de.enough.polish.util.ArrayList;
  * 
  * <P>
  * The <code>Display</code> class has a <A
- * HREF="../../../javax/microedition/lcdui/Display.html#setCurrent(javax.microedition.lcdui.Displayable)"><CODE>setCurrent()</CODE></A>
+ * HREF="Display.html#setCurrent(javax.microedition.lcdui.Displayable)"><CODE>setCurrent()</CODE></A>
  * method for setting the current <code>Displayable</code> and a <A
- * HREF="../../../javax/microedition/lcdui/Display.html#getCurrent()"><CODE>getCurrent()</CODE></A>
+ * HREF="Display.html#getCurrent()"><CODE>getCurrent()</CODE></A>
  * method for retrieving the current <code>Displayable</code>. The
  * application has control over its current <code>Displayable</code> and may
  * call <code>setCurrent()</code> at any time. Typically, the application will
@@ -90,7 +91,7 @@ import de.enough.polish.util.ArrayList;
  * action. This is not always the case, however. Another thread may change the
  * current <code>Displayable</code> in response to some other stimulus. The
  * current <code>Displayable</code> will also be changed when the timer for an
- * <A HREF="../../../javax/microedition/lcdui/Alert.html"><CODE>Alert</CODE></A>
+ * <A HREF="Alert.html"><CODE>Alert</CODE></A>
  * elapses.
  * </P>
  * 
@@ -121,10 +122,10 @@ import de.enough.polish.util.ArrayList;
  * shown the next time the application is brought into the foreground. The
  * application can determine whether a <code>Displayable</code> is actually
  * visible on the display by calling <A
- * HREF="../../../javax/microedition/lcdui/Displayable.html#isShown()"><CODE>isShown()</CODE></A>.
+ * HREF="Displayable.html#isShown()"><CODE>isShown()</CODE></A>.
  * In the case of <code>Canvas</code>, the <A
- * HREF="../../../javax/microedition/lcdui/Canvas.html#showNotify()"><CODE>showNotify()</CODE></A>
- * and <A HREF="../../../javax/microedition/lcdui/Canvas.html#hideNotify()"><CODE>hideNotify()</CODE></A>
+ * HREF="Canvas.html#showNotify()"><CODE>showNotify()</CODE></A>
+ * and <A HREF="Canvas.html#hideNotify()"><CODE>hideNotify()</CODE></A>
  * methods are called when the <code>Canvas</code> is made visible and is
  * hidden, respectively.
  * </P>
@@ -132,7 +133,7 @@ import de.enough.polish.util.ArrayList;
  * <P>
  * Each <code>MIDlet</code> application has its own current
  * <code>Displayable</code>. This means that the <A
- * HREF="../../../javax/microedition/lcdui/Display.html#getCurrent()"><CODE>getCurrent()</CODE></A>
+ * HREF="Display.html#getCurrent()"><CODE>getCurrent()</CODE></A>
  * method returns the <code>MIDlet's</code> current <code>Displayable</code>,
  * regardless of the <code>MIDlet's</code> foreground/background state. For
  * example, suppose a <code>MIDlet</code> running in the foreground has
@@ -202,7 +203,10 @@ import de.enough.polish.util.ArrayList;
  * 
  * @since MIDP 1.0
  */
-public class AndroidDisplay extends View implements NativeDisplay, OnTouchListener{
+public class AndroidDisplay 
+extends ViewGroup 
+implements NativeDisplay //, OnTouchListener
+{
 	
 	//#if polish.useFullScreen
 		//#define tmp.fullScreen
@@ -218,29 +222,26 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 	
 	/** This instance may be null*/
 	private de.enough.polish.android.lcdui.Canvas currentPolishCanvas;
-	// following variables are implicitely defined by getter- or setter-methods:
-	private ArrayList<Runnable> seriallyRunnables = new ArrayList<Runnable>();
+	// following variables are implicitly defined by getter- or setter-methods:
+	private final ArrayList<Runnable> seriallyRunnables = new ArrayList<Runnable>();
 	DisplayUtil util;
 
-	
-	//#if polish.skylight
-	private static final Object uiLock = new Object();
-	private static final Object paintLock = new Object();
-	//#endif
-	
-	@Override
-	protected void onRestoreInstanceState(Parcelable state) {
-		//#debug
-		System.out.println("onRestoreInstanceState");
-		
-	}
+	private CanvasBridge mainView;
+	private final HashMap<View, Item> itemsByViewMap = new HashMap<View, Item>();
 
-	@Override
-	protected Parcelable onSaveInstanceState() {
-		//#debug
-		System.out.println("onSaveInstanceState");
-		return null;
-	}
+//	@Override
+//	protected void onRestoreInstanceState(Parcelable state) {
+//		//#debug
+//		System.out.println("onRestoreInstanceState");
+//		super.onRestoreInstanceState(state);
+//	}
+//
+//	@Override
+//	protected Parcelable onSaveInstanceState() {
+//		//#debug
+//		System.out.println("onSaveInstanceState");
+//		return super.onSaveInstanceState();
+//	}
 
 	/**
 	 * Creates a view with the given context
@@ -248,303 +249,12 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 	 */
 	public AndroidDisplay(Context context) {
 		super(context);
-		setOnTouchListener(this);
 		setFocusable(true);
 		setFocusableInTouchMode(true);
-		if(instance == null) {
-			instance = this;
-		}
 		
-		//#if polish.skylight
-		Runnable runnable = new Runnable() {
-			public void run() {
-				while(true) {
-					paintInThread();
-					
-					// Wake up the UI thread.
-					synchronized (uiLock) {
-						uiLock.notify();
-					}
-					
-					// Put the Paint thread to sleep.
-					synchronized (paintLock) {
-						try {
-							paintLock.wait();
-						} catch (InterruptedException e) {
-							System.out.println("XXX The EnoughDrawThread was interrupted:"+e);
-							e.printStackTrace();
-						}
-					}
-				}
-			}
-		};
-		// The Android Thread API is different from everything else so we hide it.
-		//# Thread painterThread = new Thread(new ThreadGroup("EnoughThreadGroup"),runnable,"EnoughDrawThread",32*1024);
-		//# painterThread.start();
-		//#endif
-	}
-	
-	/* (non-Javadoc)
-	 * @see android.view.View#onDraw(android.graphics.Canvas)
-	 */
-	protected void onDraw(Canvas canvas) {
-		if(this.currentPolishCanvas != null)
-		{
-			if(this.currentPolishCanvas.graphics == null)
-			{
-				this.currentPolishCanvas.graphics = new Graphics(canvas);
-			}
-			//#if polish.skylight
-			synchronized (paintLock) {
-				paintLock.notify();
-			}
-			
-			synchronized (uiLock) {
-				try {
-					uiLock.wait();
-				} catch (InterruptedException e) {
-					System.out.println("XXX The EnoughDrawThread was interrupted:"+e);
-					e.printStackTrace();
-				}
-			}
-			//#else
-			//# paintInThread();
-			//#endif
-		}
-	}
-
-	protected void paintInThread() {
-		if(this.currentPolishCanvas != null) {
-			try {
-				this.currentPolishCanvas.paint(this.currentPolishCanvas.graphics);
-			} catch (Exception e) {
-				//#debug error
-				System.out.println("XXXWarning: unable to paint screen: " + this.currentPolishCanvas + ", dimension=" + this.currentPolishCanvas.getWidth() + "x" + this.currentPolishCanvas.getHeight() + ", isShown=" + this.currentPolishCanvas.isShown() + e );
-			}
-			if(this.seriallyRunnables.size() > 0) {
-				for(int i = 0; i < this.seriallyRunnables.size(); i++) {
-					Runnable runnable = this.seriallyRunnables.get(i);
-					runnable.run();
-				}
-				this.seriallyRunnables.clear();
-			}
-		}
-	}
-
-	@Override
-	protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-		super.onSizeChanged(w, h, oldw, oldh);
-//		if(this.bitmap != null) {
-			//TODO: uncomment if the exceptions remain when the unit test framework is used.
-//			this.bitmap.recycle();
-//		}
-		this.bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-		if(this.currentPolishCanvas != null) {
-			//#debug
-			System.out.println("onSizeChanged with width '"+w+"' and height '"+h+"'");
-			this.currentPolishCanvas.sizeChanged(w,h);
-		}
-		MidletBridge.instance.onSizeChanged(w, h);
-	}
-	
-
-	private Screen getCurrentScreen() {
-		Display display = Display.getInstance();
-		if (display == null) {
-			return null;
-		}
-		Displayable disp = display.getNextOrCurrent();
-		if (disp == null || (!(disp instanceof Screen))) {
-			return null;
-		}
-		return (Screen) disp;
-	}
-
-	public boolean onKeyDown(int keyCode, KeyEvent event) {
-		//#debug
-		System.out.println("AndroidDisplay.onKeyDown: keyCode=" + keyCode + ", flags=" + event.getFlags() + ", action=" + event.getAction() + ", isFromSoftKeyBoard=" + ((event.getFlags() & KeyEvent.FLAG_SOFT_KEYBOARD) == KeyEvent.FLAG_SOFT_KEYBOARD));
-		if(this.currentPolishCanvas == null) {
-			return false;
-		}
-		//#if polish.javaplatform >= Android/1.5
-		if(keyCode == KeyEvent.KEYCODE_ENTER && ((event.getFlags() & KeyEvent.FLAG_SOFT_KEYBOARD) == KeyEvent.FLAG_SOFT_KEYBOARD)) {
-			//#debug
-			System.out.println("Hiding Softkeyboard in onKeyUp");
-			return true;
-		}
-		//#endif
-		if(this.util == null)
-		{
-			this.util = new DisplayUtil(event.getDeviceId());
-		}
-		
-		int key = this.util.handleKey(keyCode, event, this.currentPolishCanvas);
-		//#debug
-		System.out.println("onKeyDown:converted android key code '" + keyCode+"' to ME code '"+key+"'");
-		
-		if(key == -13 || key == -14) {
-//			super.onKeyDown(keyCode, event);
-			return false;
-		}
-		
-		this.currentPolishCanvas.keyPressed(key);
-		//#if !tmp.fullScreen
-			Screen screen = getCurrentScreen();
-			if ((screen == null) || (!screen.keyPressedProcessed)) {			
-				if (keyCode == KeyEvent.KEYCODE_MENU) { // && this.addedCommandMenuItemBridges.size() > 0) {
-					return false;
-				}
-				if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER ) {
-					return MidletBridge.instance.onOK();
-				}
-			}
-		//#endif
-		return true;
-	}
-
-	public boolean onKeyUp(int keyCode, KeyEvent event) {
-		if(this.currentPolishCanvas == null) {
-			return false;
-		}
-		//#if polish.javaplatform >= Android/1.5
-		if(keyCode == KeyEvent.KEYCODE_ENTER && ((event.getFlags() & KeyEvent.FLAG_SOFT_KEYBOARD) == KeyEvent.FLAG_SOFT_KEYBOARD)) {
-			//#debug
-			System.out.println("Hiding Softkeyboard");
-			Screen screen = getCurrentScreen();
-			if (screen != null) {
-				boolean hideSoftKeyboard = true;				
-				Container rootContainer = screen.getRootContainer();
-				if (rootContainer != null) {
-					int offset = rootContainer.getScrollYOffset();
-					boolean handled = screen._keyPressed(de.enough.polish.android.lcdui.Canvas.KEY_ANDROID_DOWN)
-									| screen._keyReleased(de.enough.polish.android.lcdui.Canvas.KEY_ANDROID_DOWN);
-					rootContainer.setScrollYOffset(offset, false);
-					if (handled) {
-						Item item = rootContainer.getFocusedChild();
-						if (item != null) {
-							int absY = item.getAbsoluteY();
-							int screenHeight = screen.getScreenHeight();
-							if (absY > screenHeight / 3 || absY < rootContainer.relativeY) {
-								int newYOffset = - item.relativeY;
-								int contHeight = rootContainer.getItemAreaHeight();
-								if (contHeight < screen.getScreenContentHeight()) {
-									newYOffset -= rootContainer.relativeY - screen.getScreenContentY();
-								}
-								screen.setScrollYOffset( newYOffset, true);
-								rootContainer.resetLastPointerPressYOffset();
-							}
-							hideSoftKeyboard = false;
-							
-						}
-					}
-				}
-				if (hideSoftKeyboard){
-					MidletBridge.instance.hideSoftKeyboard();
-				}
-				return true;
-			} 
-		}
-		//#endif
-		if(this.util == null)
-		{
-			this.util = new DisplayUtil(event.getDeviceId());
-		}
-		
-		int key = this.util.handleKey(keyCode, event, this.currentPolishCanvas);
-		
-		
-		//#debug
-		System.out.println("onKeyUp:converted android key code '" + keyCode+"' to ME code '"+key+"'");
-		this.currentPolishCanvas.keyReleased(key);
-		//#if !tmp.fullScreen
-			if (keyCode == KeyEvent.KEYCODE_MENU) { // && this.addedCommandMenuItemBridges.size() > 0) {
-				Screen screen = getCurrentScreen();
-				if ((screen == null) || (!screen.keyPressedProcessed)) {			
-					return false;
-				}
-			}
-			if (keyCode == KeyEvent.KEYCODE_BACK) {
-				return MidletBridge.instance.onBack();
-			}
-		//#endif
-		
-		return true;
 	}
 	
 	
-	
-	@Override
-	public boolean onKeyMultiple(int keyCode, int repeatCount, KeyEvent event)
-	{
-		//#debug
-		System.out.println("onMultiple: key event: characters=[" + event.getCharacters() + "], number=[" + event.getNumber() + "], unicode/meta=[" + event.getUnicodeChar(event.getMetaState()) + "], isSystem=" + event.isSystem() + ",  keyCode=[" + keyCode + "/" + event.getKeyCode() + "], action=" + event.getAction() + ", repeat=" + repeatCount + ", metaState=" + event.getMetaState() + ", describeContents=" + event.describeContents() + ", flags=" + event.getFlags());
-		if(this.currentPolishCanvas == null) {
-			return false;
-		}
-		if(this.util == null)
-		{
-			this.util = new DisplayUtil(event.getDeviceId());
-		}
-		
-		int key = this.util.handleKey(keyCode, event, this.currentPolishCanvas);
-		if (repeatCount > 0) {
-			this.currentPolishCanvas.keyRepeated(key);
-		} else {
-			if (key == 0) {
-				String characters = event.getCharacters();
-				if (characters != null) {
-					for (int i=0; i<characters.length();i++) {
-						key = characters.charAt(i);
-						this.currentPolishCanvas.keyPressed(key);
-						this.currentPolishCanvas.keyReleased(key);
-					}
-					return true;
-				}
-			}
-			this.currentPolishCanvas.keyPressed(key);
-			this.currentPolishCanvas.keyReleased(key);
-		}
-		return true;
-		//return super.onKeyMultiple(keyCode, repeatCount, event);
-	}
-
-	/**
-	 * 
-	 * @param x physical x position
-	 * @param y physical y position
-	 */
-	private void onPointerPressed(float x, float y) {
-		//#debug
-		System.out.println("onPointerPressed.x="+x+".y="+y);
-		if(this.currentPolishCanvas == null) {
-			return;
-		}
-		int truncatedX = (int)x;
-		int truncatedY = (int)y;
-		this.currentPolishCanvas.pointerPressed(truncatedX,truncatedY);
-	}
-	
-	private void onPointerReleased(float x, float y) {
-		//#debug
-		System.out.println("onPointerReleased.x="+x+".y="+y);
-		if(this.currentPolishCanvas == null) {
-			return;
-		}
-		int truncatedX = (int)x;
-		int truncatedY = (int)y;
-		this.currentPolishCanvas.pointerReleased(truncatedX,truncatedY);
-	}
-	
-	private void onPointerDragged(float x, float y) {
-		//#debug
-		System.out.println("onPointerDragged.x="+x+".y="+y);
-		if(this.currentPolishCanvas == null) {
-			return;
-		}
-		int truncatedX = (int)x;
-		int truncatedY = (int)y;
-		this.currentPolishCanvas.pointerDragged(truncatedX,truncatedY);
-	}
 	
 	/////////////////////
 
@@ -555,7 +265,7 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 	 * The value of <code>LIST_ELEMENT</code> is <code>1</code>.
 	 * </P>
 	 * <DT><B>See Also: </B> <A
-	 * HREF="../../../javax/microedition/lcdui/Display.html#getBestImageHeight(int)"><CODE>getBestImageHeight(int
+	 * HREF="Display.html#getBestImageHeight(int)"><CODE>getBestImageHeight(int
 	 * imageType)</CODE></A>
 	 * 
 	 * @since MIDP 2.0
@@ -569,7 +279,7 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 	 * The value of <code>CHOICE_GROUP_ELEMENT</code> is <code>2</code>.
 	 * </P>
 	 * <DT><B>See Also: </B> <A
-	 * HREF="../../../javax/microedition/lcdui/Display.html#getBestImageHeight(int)"><CODE>getBestImageHeight(int
+	 * HREF="Display.html#getBestImageHeight(int)"><CODE>getBestImageHeight(int
 	 * imageType)</CODE></A>
 	 * 
 	 * @since MIDP 2.0
@@ -583,7 +293,7 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 	 * The value of <code>ALERT</code> is <code>3</code>.
 	 * </P>
 	 * <DT><B>See Also: </B> <A
-	 * HREF="../../../javax/microedition/lcdui/Display.html#getBestImageHeight(int)"><CODE>getBestImageHeight(int
+	 * HREF="Display.html#getBestImageHeight(int)"><CODE>getBestImageHeight(int
 	 * imageType)</CODE></A>
 	 * 
 	 * @since MIDP 2.0
@@ -702,9 +412,11 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 			return instance;
 		}
 		if(m == null) {
-			throw new NullPointerException("The display is requested without providing a MIDlet reference.");
+			//throw new NullPointerException("The display is requested without providing a MIDlet reference.");
+			instance = new AndroidDisplay(null);
+		} else {
+			instance = new AndroidDisplay(m._getMidletBridge());
 		}
-		instance = new AndroidDisplay(m._getMidletBridge());
 		return instance;
 	}
 	
@@ -771,8 +483,7 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 	 * @return number of colors
 	 */
 	public int numColors() {
-		return 32000;
-		// TODO implement numColors
+		return 65536;
 	}
 
 	/**
@@ -787,8 +498,7 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 	 * @since MIDP 2.0
 	 */
 	public int numAlphaLevels() {
-		return 64;
-		// TODO implement numAlphaLevels
+		return 256;
 	}
 
 	/**
@@ -797,7 +507,7 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 	 * may not actually be visible on the display if the <code>MIDlet</code>
 	 * is running in the background, or if the <code>Displayable</code> is
 	 * obscured by a system screen. The <A
-	 * HREF="../../../javax/microedition/lcdui/Displayable.html#isShown()"><CODE>Displayable.isShown()</CODE></A>
+	 * HREF="Displayable.html#isShown()"><CODE>Displayable.isShown()</CODE></A>
 	 * method may be called to determine whether the <code>Displayable</code>
 	 * is actually visible on the display.
 	 * 
@@ -893,7 +603,7 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 	 * 
 	 * <p>
 	 * If the <code>Displayable</code> passed to <code>setCurrent()</code>
-	 * is an <A HREF="../../../javax/microedition/lcdui/Alert.html"><CODE>Alert</CODE></A>,
+	 * is an <A HREF="Alert.html"><CODE>Alert</CODE></A>,
 	 * the previously current <code>Displayable</code>, if any, is restored
 	 * after the <code>Alert</code> has been dismissed. If there is a current
 	 * <code>Displayable</code>, the effect is as if
@@ -912,7 +622,7 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 	 * <p>
 	 * To specify the <code>Displayable</code> to be shown after an
 	 * <code>Alert</code> is dismissed, the application should use the <A
-	 * HREF="../../../javax/microedition/lcdui/Display.html#setCurrent(javax.microedition.lcdui.Alert,
+	 * HREF="Display.html#setCurrent(javax.microedition.lcdui.Alert,
 	 * javax.microedition.lcdui.Displayable)"><CODE>setCurrent(Alert,
 	 * Displayable)</CODE></A> method. If the application calls
 	 * <code>setCurrent()</code> while an <code>Alert</code> is current, the
@@ -933,30 +643,50 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 	 *            the Displayable requested to be made current; null is allowed
 	 * @see #getCurrent()
 	 */
-	public void setCurrent(de.enough.polish.android.lcdui.Canvas nextDisplayable) {
-		if (this.currentPolishCanvas != null) {
-			this.currentPolishCanvas._hideNotify();
-		}
-		//#debug
-		System.out.println("Setting currentCanvas to '"+nextDisplayable+"'");
-		this.currentPolishCanvas = nextDisplayable;
-		if(nextDisplayable != null) {
-			nextDisplayable.setBitmap(this.bitmap);
-			nextDisplayable._showNotify();
-		}
-		postInvalidate();
+//	public void setCurrent(de.enough.polish.android.lcdui.Canvas nextDisplayable) {
+//		if (this.currentPolishCanvas != null) {
+//			this.currentPolishCanvas._hideNotify();
+//		}
+//		//#debug
+//		System.out.println("Setting currentCanvas to '"+nextDisplayable+"'");
+//		this.currentPolishCanvas = nextDisplayable;
+//		if(nextDisplayable != null) {
+//			nextDisplayable.setBitmap(this.bitmap);
+//			nextDisplayable._showNotify();
+//		}
+//		postInvalidate();
+//	}
+	
+	public void setCurrent(de.enough.polish.ui.Display nextDisplayable) {
+		setCurrent((Displayable)nextDisplayable);
 	}
 	
 
 	public void setCurrent(Displayable nextDisplayable) {
-		if (nextDisplayable instanceof Dialog) {
-			if (Looper.myLooper() == null) {
-				Looper.prepare();
+		//#debug
+		System.out.println("AndroidDisplay.setCurrent: "  + nextDisplayable);
+		if (nextDisplayable instanceof Canvas) {
+			Canvas androidCanvas = (Canvas)nextDisplayable;
+			CanvasBridge bridge = androidCanvas._getBridge();
+			if (bridge == null) {
+				//#debug
+				System.out.println("Creating a new bridge with context " + MidletBridge.getInstance());
+				bridge = new CanvasBridge(MidletBridge.getInstance());
+				bridge.setCanvas(androidCanvas);
 			}
-			Dialog window = (Dialog) nextDisplayable;
-			window.show();
+			if (this.mainView != null) {
+				removeAllViews();
+				if (this.mainView instanceof CanvasBridge) {
+					((CanvasBridge)this.mainView).hideNotify();
+				}
+				removeView( this.mainView );
+			}
+			this.mainView = bridge;
+			bridge.showNotify();
+			addView( bridge, 0 );
+			bridge.requestFocus();
 			return;
-		}
+		}		
 	}
 
 	/**
@@ -976,7 +706,7 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 	 * 
 	 * <p>
 	 * In other respects, this method behaves identically to <A
-	 * HREF="../../../javax/microedition/lcdui/Display.html#setCurrent(javax.microedition.lcdui.Displayable)"><CODE>setCurrent(Displayable)</CODE></A>.
+	 * HREF="Display.html#setCurrent(javax.microedition.lcdui.Displayable)"><CODE>setCurrent(Displayable)</CODE></A>.
 	 * </p>
 	 * 
 	 * @param alert -
@@ -1000,7 +730,7 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 	 * so that this <code>Item</code> is visible, and possibly assigns the
 	 * focus to this <code>Item</code>. The containing
 	 * <code>Displayable</code> is first made current as if <A
-	 * HREF="../../../javax/microedition/lcdui/Display.html#setCurrent(javax.microedition.lcdui.Displayable)"><CODE>setCurrent(Displayable)</CODE></A>
+	 * HREF="Display.html#setCurrent(javax.microedition.lcdui.Displayable)"><CODE>setCurrent(Displayable)</CODE></A>
 	 * had been called. When the containing <code>Displayable</code> becomes
 	 * current, or if it is already current, it is scrolled if necessary so that
 	 * the requested <code>Item</code> is made visible. Then, if the
@@ -1132,6 +862,19 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 	public void callSerially(Runnable r) {
 		this.seriallyRunnables.add(r);
 	}
+	
+
+	public void callSeriallies() {
+		if (this.seriallyRunnables.size() > 0) {
+			Runnable[] runnables = this.seriallyRunnables.toArray(new Runnable[ this.seriallyRunnables.size()]);
+			this.seriallyRunnables.clear();
+			for (int i = 0; i < runnables.length; i++) {
+				Runnable runnable = runnables[i];
+				runnable.run();
+			}
+		}
+	}
+	
 
 	/**
 	 * Requests a flashing effect for the device's backlight. The flashing
@@ -1214,10 +957,10 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 	/**
 	 * Returns the best image width for a given image type. The image type must
 	 * be one of <A
-	 * HREF="../../../javax/microedition/lcdui/Display.html#LIST_ELEMENT"><CODE>LIST_ELEMENT</CODE></A>,
+	 * HREF="Display.html#LIST_ELEMENT"><CODE>LIST_ELEMENT</CODE></A>,
 	 * <A
-	 * HREF="../../../javax/microedition/lcdui/Display.html#CHOICE_GROUP_ELEMENT"><CODE>CHOICE_GROUP_ELEMENT</CODE></A>,
-	 * or <A HREF="../../../javax/microedition/lcdui/Display.html#ALERT"><CODE>ALERT</CODE></A>.
+	 * HREF="Display.html#CHOICE_GROUP_ELEMENT"><CODE>CHOICE_GROUP_ELEMENT</CODE></A>,
+	 * or <A HREF="Display.html#ALERT"><CODE>ALERT</CODE></A>.
 	 * 
 	 * @param imageType -
 	 *            the image type
@@ -1235,10 +978,10 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 	/**
 	 * Returns the best image height for a given image type. The image type must
 	 * be one of <A
-	 * HREF="../../../javax/microedition/lcdui/Display.html#LIST_ELEMENT"><CODE>LIST_ELEMENT</CODE></A>,
+	 * HREF="Display.html#LIST_ELEMENT"><CODE>LIST_ELEMENT</CODE></A>,
 	 * <A
-	 * HREF="../../../javax/microedition/lcdui/Display.html#CHOICE_GROUP_ELEMENT"><CODE>CHOICE_GROUP_ELEMENT</CODE></A>,
-	 * or <A HREF="../../../javax/microedition/lcdui/Display.html#ALERT"><CODE>ALERT</CODE></A>.
+	 * HREF="Display.html#CHOICE_GROUP_ELEMENT"><CODE>CHOICE_GROUP_ELEMENT</CODE></A>,
+	 * or <A HREF="Display.html#ALERT"><CODE>ALERT</CODE></A>.
 	 * 
 	 * @param imageType -
 	 *            the image type
@@ -1254,15 +997,89 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 	}
 
 	public boolean notifyDisplayableChange(
-			de.enough.polish.ui.Displayable currentDisplayable2,
-			de.enough.polish.ui.Displayable nextDisplayable) 
+			de.enough.polish.ui.Displayable currentDisp,
+			de.enough.polish.ui.Displayable nextDisp) 
 	{
+		//#if polish.useNativeAlerts
+			if (nextDisp instanceof Alert) {
+				final Alert alert = (Alert) nextDisp;
+				alert.setNextDisplayable(currentDisp); 
+				final AlertDialog.Builder builder = new AlertDialog.Builder(MidletBridge.getInstance());
+				builder.setTitle(alert.getTitle());
+				if (alert.getTitle() != alert.getString()) {
+					builder.setMessage(alert.getString());
+				}
+				if (alert.getType() == AlertType.INFO || alert.getType() == AlertType.CONFIRMATION) {
+					builder.setIcon(android.R.drawable.ic_dialog_info);
+				} else {
+					builder.setIcon(android.R.drawable.ic_dialog_alert);					
+				}
+				IdentityArrayList commandsList = alert._commands;
+				if (commandsList != null) {
+					int lastIndex = Math.min(3, commandsList.size()) - 1;
+					boolean positiveHandled = false;
+					boolean negativeHandled = false;
+					boolean neutralHandled = false;
+					for (int i=0; i <= lastIndex; i++) {
+						Command command = (Command) commandsList.get(i);
+						int type = command.getCommandType();
+						if (type == Command.OK || type == Command.SCREEN || type == Command.ITEM) {
+							if (!positiveHandled) {
+								positiveHandled = true;
+								builder.setPositiveButton(command.getLabel(), new CommandClickHandler(alert, command));
+							} else if (!neutralHandled) {
+								neutralHandled = true;
+								builder.setNeutralButton(command.getLabel(), new CommandClickHandler(alert, command));
+							}
+						} else {
+							if (!negativeHandled) {
+								negativeHandled = true;
+								builder.setNegativeButton(command.getLabel(), new CommandClickHandler(alert, command));
+							} else if (!neutralHandled) {
+								neutralHandled = true;
+								builder.setNeutralButton(command.getLabel(), new CommandClickHandler(alert, command));
+							}
+						}
+					}
+					//TODO handle cases when there are more than 3 commands or more than 2 positive/negative commands
+				}
+
+//				public void onClick(DialogInterface dialog, int which) {
+//				System.out.println("Neutral Button Clicked");
+//				AlertDialog ad=builder.create();
+//				ad.cancel();
+//				}
+
+//				builder.setOnCancelListener(new OnCancelListener() {
+//					public void onCancel(DialogInterface dialog) {
+//						System.out.println(" the cancel listner invoked");
+//					}
+//				});
+				MidletBridge.getInstance().runOnUiThread( new Runnable() {
+					public void run() {
+						builder.show();
+					}
+				});
+				return true;
+			}
+		//#endif
+		// check if we should hide the softkeyboard:
+		if (nextDisp instanceof ScreenChangeAnimation) {
+			nextDisp = ((ScreenChangeAnimation)nextDisp).getNextDisplayable();
+		}
+		if (nextDisp instanceof Screen) {
+			Screen nextScreen = (Screen) nextDisp;
+			Item focusedItem = nextScreen.getRootContainer().getFocusedChild();
+			if (!(focusedItem instanceof TextField)) {
+				MidletBridge.getInstance().hideSoftKeyboard();
+			}
+		}
 		return false;
 	}
 
-	public void setCurrent(de.enough.polish.ui.Display nextDisplayable) {
-		//#= setCurrent((de.enough.polish.android.lcdui.Canvas)nextDisplayable);
-	}
+//	public void setCurrent(de.enough.polish.ui.Display nextDisplayable) {
+//		//#= setCurrent((de.enough.polish.android.lcdui.Canvas)nextDisplayable);
+//	}
 
 //	public static AndroidDisplay getInstance(MIDlet dlet) {
 //		if(instance == null) {
@@ -1271,25 +1088,26 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 //		return instance;
 //	}
 
-	public boolean onTouch(View arg0, MotionEvent event) {
-		int action = event.getAction();
-		float x = event.getX();
-		float y = event.getY();
-		//#debug
-		System.out.println("onTouchEvent: action="+action + ", x=" + x + ", y=" + y);
-		switch(action) {
-			case MotionEvent.ACTION_DOWN:
-				onPointerPressed(x,y);
-				return true;
-			case MotionEvent.ACTION_UP:
-				onPointerReleased(x,y);
-				return true;
-			case MotionEvent.ACTION_MOVE:
-				onPointerDragged(x,y);
-				return true;
-			default: return false;
-		}
-	}
+//	public boolean onTouch(View arg0, MotionEvent event) {
+//		int action = event.getAction();
+//		float x = event.getX();
+//		float y = event.getY();
+//		//#debug
+//		System.out.println("onTouchEvent: action="+action + ", x=" + x + ", y=" + y);
+//		switch(action) {
+//			case MotionEvent.ACTION_DOWN:
+//				onPointerPressed(x,y);
+//				return true;
+//			case MotionEvent.ACTION_UP:
+//				onPointerReleased(x,y);
+//				return true;
+//			case MotionEvent.ACTION_MOVE:
+//				onPointerDragged(x,y);
+//				return true;
+//			default: return false;
+//		}
+//	}
+	
 
 	public void shutdown() {
 		if(this.currentPolishCanvas != null) {
@@ -1307,52 +1125,325 @@ public class AndroidDisplay extends View implements NativeDisplay, OnTouchListen
 			setCurrent(this.currentPolishCanvas);
 		}
 	}
-
-	//#if polish.javaplatform >= Android/1.5
-	@Override
-	public InputConnection onCreateInputConnection(EditorInfo editorInfo) {
-		editorInfo.imeOptions |= EditorInfo.IME_FLAG_NO_EXTRACT_UI | EditorInfo.IME_ACTION_NONE;
-        //return new PolishInputConnection(this, false);
-		return new BaseInputConnection(this, false) {
-			public boolean deleteSurroundingText(int leftLength, int rightLength) {
-				// Emulate the del key. This is needed for the Sony Ericsson Xperia X8 device which does not send the raw key event
-				// but calls this method to communicate a deletion. No other device behaves like this.
-				onKeyDown(KeyEvent.KEYCODE_DEL, delKeyDownEvent);
-				onKeyUp(KeyEvent.KEYCODE_DEL, delKeyUpEvent);
-				return super.deleteSurroundingText(leftLength, rightLength);
-			}
-
-			/* (non-Javadoc)
-			 * @see android.view.inputmethod.BaseInputConnection#commitCompletion(android.view.inputmethod.CompletionInfo)
-			 */
-			public boolean commitCompletion(CompletionInfo text) {
-				System.out.println("commitCompletion: " + text + ": " + text.getText());
-				return super.commitCompletion(text);
-			}
-
-			/* (non-Javadoc)
-			 * @see android.view.inputmethod.BaseInputConnection#commitText(java.lang.CharSequence, int)
-			 */
-			public boolean commitText(CharSequence text, int startPos) {
-				System.out.println("commitText: " + text + ", startPost=" + startPos);
-				return super.commitText(text, startPos);
-			}
-			
-		};
-	}
-
-	@Override
-	public boolean onCheckIsTextEditor() {
-		return true;
-	}
-
-	@Override
-	public boolean checkInputConnectionProxy(View view) {
+	
+	public void onShow(final View view, final Item item) {
 		//#debug
-		System.out.println("XXX checkInputconnectionProxy called with view '"+view+"'");
-		return true;
+		System.out.println("onShow for " + item);
+		this.itemsByViewMap.put(view, item);
+		final ViewParent parent = view.getParent();
+		if (parent == this) {
+			if (item.isFocused()) {
+				view.requestFocus();
+				if (item instanceof TextField) {
+					//TODO this does not work here:
+					MidletBridge.getInstance().showSoftKeyboard();
+				}
+			}
+			return; // already added
+		}
+		MidletBridge.getInstance().runOnUiThread( new Runnable() {
+			public void run() {
+				if (parent != null) {
+					((ViewGroup)parent).removeView(view);
+				}
+				addView( view );
+				if (item.isFocused()) {
+					view.requestFocus();
+					if (item instanceof TextField) {
+						//TODO this does not work here:
+						MidletBridge.getInstance().showSoftKeyboard();
+					}
+				}
+			}
+		});
 	}
-	//#endif
+	
+	public void onHide(final View view, final Item item) {
+		//#debug
+		System.out.println("onHide for " + item);
+		MidletBridge.getInstance().runOnUiThread( new Runnable() {
+			public void run() {
+				removeView( view );
+				AndroidDisplay.this.itemsByViewMap.remove(view);
+			}
+		});
+	}
+
+	protected CanvasBridge getCurrentCanvasBridge() {
+		return this.mainView;
+	}
+	
+//	//#if polish.javaplatform >= Android/1.5
+//	@Override
+//	public InputConnection onCreateInputConnection(EditorInfo editorInfo) {
+//		editorInfo.imeOptions |= EditorInfo.IME_FLAG_NO_EXTRACT_UI | EditorInfo.IME_ACTION_NONE;
+//        //return new PolishInputConnection(this, false);
+//		return new BaseInputConnection(this, false) {
+//			private boolean isTextInputEnabled;
+//
+//			public boolean deleteSurroundingText(int leftLength, int rightLength) {
+//				// Emulate the del key. This is needed for the Sony Ericsson Xperia X8 device which does not send the raw key event
+//				// but calls this method to communicate a deletion. No other device behaves like this.
+//				onKeyDown(KeyEvent.KEYCODE_DEL, delKeyDownEvent);
+//				onKeyUp(KeyEvent.KEYCODE_DEL, delKeyUpEvent);
+//				return super.deleteSurroundingText(leftLength, rightLength);
+//			}
+//		};
+//	}
+//	//#endif
+
+	/*
+	@Override
+	protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+		System.out.println("AndroidDisplay.onLayout: " + left + ", " + top + ", " + right + ", " + bottom);
+		this.positionLeft = left;
+		this.positionRight = right;
+		this.positionTop = top;
+		this.positionBottom = bottom;
+		int count = getChildCount();
+		System.out.println("layout: child count=" + count);
+		for (int i = 0; i < count; i++) {
+			View child = getChildAt(i);
+			if (i == 0) {
+				child.layout(left, 0, right, bottom - top);
+			} else if (child == this.editView){
+				TextField textField = this.editView.getTextField();
+				if (textField != null) {
+					this.editView.measure( this.positionRight - this.positionLeft, this.positionBottom - this.positionTop );
+					int absoluteX = textField.getAbsoluteX() + textField.getContentX();
+					int absoluteY = textField.getAbsoluteY() + textField.getContentY();
+					this.editView.layout( absoluteX, absoluteY, absoluteX + textField.getContentWidth(), absoluteY + textField.getContentHeight() );
+				}
+			} else {
+				System.out.println("AndroidDisplay: layouting child " + child);
+				int width = right-left;
+				int height = bottom-top;
+				LayoutParams params = child.getLayoutParams();
+				params.width = 100;
+				params.height = 100;
+				child.setLayoutParams(params);
+				child.measure(width, height);
+				System.out.println("AndroidDisplay: After measure child: dimension=" + child.getMeasuredWidth() + "x" + child.getMeasuredHeight());
+				child.layout(50, 50, 150, 150);
+				//child.layout(0, 0, 150, 150);
+				child.requestFocus();
+				bringChildToFront(child);
+			}
+		}
+	}
+	*/
 
 	
+	
+	//#if polish.useNativeAlerts
+		private static class CommandClickHandler implements DialogInterface.OnClickListener {
+			private Alert alert;
+			private Command command;
+			
+			
+			
+			public CommandClickHandler(Alert alert, Command command) {
+				this.alert = alert;
+				this.command = command;
+			}
+
+
+
+			public void onClick(DialogInterface dialog, int which) {
+				this.command.commandAction(null, this.alert);
+			}
+			
+		}
+	//#endif
+
+	@Override
+	public void dispatchDraw(android.graphics.Canvas canvas) {
+		//System.out.println("dispatch draw with clip=" + canvas.getClipBounds());
+		
+        final int count = getChildCount();
+        //int yOffset = 0;
+        Rect clip = null;
+        Screen screen = getCurrentPolishScreen();
+        Container rootContainer = null;
+		if (screen != null) {
+			//yOffset = screen.getRootContainer().getScrollYOffset();
+			rootContainer = screen.getRootContainer();
+			int contX = screen.getScreenContentX();
+			int contY = screen.getScreenContentY();
+    		clip = new Rect( contX, contY, contX + screen.getScreenContentWidth(), contY + screen.getScreenContentHeight() );
+		}
+    	this.mainView.draw(canvas);
+    	if (clip != null) {
+    		// make sure that native views are not drawn above the title of the screen:
+        	canvas.save();
+    		canvas.clipRect(clip, Op.INTERSECT);
+    	}
+    	
+        for (int i = 1; i < count; i++) {
+            View view = getChildAt(i);
+            Item item = this.itemsByViewMap.get(view);
+            int x = item.getAbsoluteX() + item.getContentX();
+            int y = item.getAbsoluteY() + item.getContentY();
+            if (y != view.getTop()) {
+            	view.layout(x, y, x + view.getMeasuredWidth(), y + view.getMeasuredHeight());
+            }
+        	boolean usePreviousClipping = (clip != null) && (item.getParentRoot() != rootContainer);
+			if (usePreviousClipping) {
+				// this is a native view within a frame:
+        		canvas.restore();
+        	}
+			canvas.translate(x, y);
+        	view.draw(canvas);
+        	canvas.translate(-x, -y);
+        	if (usePreviousClipping) {
+        		canvas.clipRect(clip, Op.INTERSECT);
+        	}
+        }
+		if (clip != null) {
+			canvas.restore();
+		}
+	}
+
+		
+		
+	 Screen getCurrentPolishScreen() {
+		Displayable displayable = Display.getInstance().getCurrent();
+		if (displayable instanceof Screen) {
+			return (Screen) displayable;
+		}
+		return null;
+	}
+
+
+
+		    public static class LayoutParams extends ViewGroup.LayoutParams {
+		        public final int horizontal_spacing;
+		        public final int vertical_spacing;
+
+		        /**
+		         * @param horizontal_spacing Pixels between items, horizontally
+		         * @param vertical_spacing Pixels between items, vertically
+		         */
+		        public LayoutParams(int horizontal_spacing, int vertical_spacing) {
+		            super(0, 0);
+		            this.horizontal_spacing = horizontal_spacing;
+		            this.vertical_spacing = vertical_spacing;     
+		        }
+		    }
+
+		   
+		    @Override
+		    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+		        int width = MeasureSpec.getSize(widthMeasureSpec);
+		        int height = MeasureSpec.getSize(heightMeasureSpec);
+		        this.mainView.measure(width, height);
+		        
+//		        Screen screen = getCurrentPolishScreen();
+//		        if (screen != null) {
+//		        	UiAccess.init(screen);
+//		        }
+		        
+		        // other views are measured by the J2ME Polish items
+		        setMeasuredDimension(width, height);
+//		        
+//		        final int count = getChildCount();
+//		        System.out.println("measuring " + count + " views");
+//		        for (int i = 0; i < count; i++) {
+//		            final View child = getChildAt(i);
+//		            System.out.println("view " + i + "=" + child);
+//		        }
+//		        int line_height = 0;
+//
+//		        int xpos = getPaddingLeft();
+//		        int ypos = getPaddingTop();
+//		        // measure main view:
+//		        getChildAt(0).measure(width, height);
+//		        // measure native AndroidItemViews and the main view:
+//		        for (int i = 1; i < count; i++) {
+//		            final View child = getChildAt(i);
+//		            if (child instanceof AndroidItemView) {
+//			            AndroidItemView itemView = (AndroidItemView) child;
+//			            Item item = itemView.getPolishItem();
+//		            //if (child.getVisibility() != GONE) {
+//		                //final LayoutParams lp = (LayoutParams) child.getLayoutParams();
+//		                int availableChildWidth;
+//		                if (item.getAvailableContentWidth() < item.itemWidth) {
+//		                	availableChildWidth = item.getAvailableContentWidth();
+//		                } else {
+//		                	availableChildWidth = item.getContentWidth();
+//		                }
+//		                int availableChildHeight = item.getContentHeight();
+//		                child.measure(
+//		                        MeasureSpec.makeMeasureSpec(availableChildWidth, MeasureSpec.EXACTLY),
+//		                        MeasureSpec.makeMeasureSpec(availableChildHeight, MeasureSpec.AT_MOST));
+//
+//		                final int childw = child.getMeasuredWidth();
+//		                System.out.println("child-width=" + childw + " of " + child);
+//		                line_height = Math.max(line_height, child.getMeasuredHeight() + lp.vertical_spacing);
+//
+//		                if (xpos + childw > width) {
+//		                    xpos = getPaddingLeft();
+//		                    ypos += line_height;
+//		                }
+//
+//		                xpos += childw + lp.horizontal_spacing;
+//		            //}
+//		            }
+//		        }
+//		        this.line_height = line_height;
+//
+//		        if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.UNSPECIFIED){
+//		            height = ypos + line_height;
+//
+//		        } else if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.AT_MOST){
+//		            if (ypos + line_height < height){
+//		                height = ypos + line_height;
+//		            }
+//		        }
+		    }
+
+		    @Override
+		    protected ViewGroup.LayoutParams generateDefaultLayoutParams() {
+		        return new LayoutParams(1, 1); // default of 1px spacing
+		    }
+
+		    @Override
+		    protected boolean checkLayoutParams(ViewGroup.LayoutParams p) {
+		        if (p instanceof LayoutParams) {
+		            return true;
+		        }
+		        return false;
+		    }
+
+		    @Override
+		    protected void onLayout(boolean changed, int l, int t, int r, int b) {
+		    	int xpos, ypos;
+		        final int count = getChildCount();
+		        for (int i = 0; i < count; i++) {
+		            final View child = getChildAt(i);
+		            if (child == this.mainView) {
+		            	child.layout(0, 0, r-l, b-t);
+		            } else {
+		            	Item item = this.itemsByViewMap.get(child);
+		                xpos = item.getAbsoluteX() + item.getContentX();
+		                ypos = item.getAbsoluteY() + item.getContentY();
+		                child.layout(xpos, ypos, xpos + child.getMeasuredWidth(), ypos + child.getMeasuredHeight());
+		            }
+		        }
+		    }
+
+		
+//		    public void addView(View view) {
+//		    	System.out.println("ADDING VIEW " + view);
+//		    	super.addView(view);
+//		    }
+//		    
+//		    
+//		    public void addView(View view, int pos) {
+//		    	System.out.println("ADDING VIEW " + view + " AT POS " + pos);
+//		    	super.addView(view, pos);
+//		    }
+		
 }
+
+

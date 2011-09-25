@@ -1,6 +1,9 @@
 //#condition polish.android
 package de.enough.polish.android.rms;
 
+import de.enough.polish.util.Arrays;
+import de.enough.polish.util.Comparator;
+
 public class SqlRecordEnumeration implements RecordEnumeration{
 
 	private final RecordStore recordStore;
@@ -54,6 +57,11 @@ public class SqlRecordEnumeration implements RecordEnumeration{
 		}
 		this.keepUpdated = keepUpdated2;
 	}
+	
+	private byte[] load(int recordId) throws InvalidRecordIDException {
+		return this.sqlDao.getRecord(this.recordStore.getPk(),recordId);
+	}
+
 
 	public byte[] nextRecord() throws InvalidRecordIDException,RecordStoreNotOpenException, RecordStoreException {
 		if(isDestroyed()) {
@@ -68,7 +76,7 @@ public class SqlRecordEnumeration implements RecordEnumeration{
 		}
 		this.lastRecordIndex = nextRecordIndex;
 		int recordId = this.recordIds[nextRecordIndex];
-		byte[] result = this.sqlDao.getRecord(this.recordStore.getPk(),recordId);
+		byte[] result = load(recordId);
 		return result;
 	}
 
@@ -105,7 +113,7 @@ public class SqlRecordEnumeration implements RecordEnumeration{
 		}
 		this.lastRecordIndex = previousRecordIndex;
 		int recordId = this.recordIds[previousRecordIndex];
-		byte[] result = this.sqlDao.getRecord(this.recordStore.getPk(),recordId);
+		byte[] result = load(recordId);
 		return result;
 	}
 
@@ -132,6 +140,7 @@ public class SqlRecordEnumeration implements RecordEnumeration{
 		sort();
 	}
 
+
 	public void reset() {
 		if(isDestroyed()) {
 			throw new IllegalStateException("This RecordEnumeration instance is destroyed.");
@@ -152,11 +161,20 @@ public class SqlRecordEnumeration implements RecordEnumeration{
 		// Remove recordIds which do not match the filter.
 		// Do this by invalidating not matching ids instead of harvesting the matching ones in a list. This way we safe a lot of object creations when filling the list with Integer objects.
 		int numberOfRecords = this.recordIds.length;
+		long recordStorePk = this.recordStore.getPk();
 		for (int currentIndex = 0; currentIndex < numberOfRecords; currentIndex++) {
 			int currentRecordId = this.recordIds[currentIndex];
-			byte[] currentData = this.sqlDao.getRecord(this.recordStore.getPk(),currentRecordId);
-			boolean filterMatches = this.filter.matches(currentData);
-			if( ! filterMatches) {
+			byte[] currentData;
+			try {
+				currentData = this.sqlDao.getRecord(recordStorePk, currentRecordId);
+				boolean filterMatches = this.filter.matches(currentData);
+				if( ! filterMatches) {
+					this.recordIds[currentIndex] = -1;
+					deleteCount++;
+				}
+			} catch (InvalidRecordIDException e) {
+				//#debug error
+				System.out.println("Unable to filter record with ID " + currentRecordId + e);
 				this.recordIds[currentIndex] = -1;
 				deleteCount++;
 			}
@@ -177,9 +195,50 @@ public class SqlRecordEnumeration implements RecordEnumeration{
 	}
 	
 	private void sort() {
-		if(this.comparator == null) {
+		if (this.comparator == null) {
 			return;
 		}
 		
+		int[] ids = this.recordIds;
+		Integer[] sortableIds = new Integer[ids.length];
+		for (int i = 0; i < sortableIds.length; i++) {
+			sortableIds[i] = new Integer( ids[i] );
+		}
+		
+		Arrays.sort(sortableIds, new RecordComparatorWrapper(this.comparator));
+		
+		for (int i = 0; i < sortableIds.length; i++) {
+			ids[i] = sortableIds[i].intValue();
+		}
+		
+		this.recordIds = ids;
 	}
+
+	
+	
+	private class RecordComparatorWrapper implements Comparator {
+		
+		private RecordComparator recordComparator;
+		
+		
+		public RecordComparatorWrapper(RecordComparator recordComparator) {
+			this.recordComparator = recordComparator;
+		}
+
+		public int compare(Object o1, Object o2) {
+			Integer id1 = (Integer) o1;
+			Integer id2 = (Integer) o2;
+			try {
+				byte[] record1 = SqlRecordEnumeration.this.load( id1.intValue() );
+				byte[] record2 = SqlRecordEnumeration.this.load( id2.intValue() );
+				return this.recordComparator.compare(record1, record2);
+			} catch (InvalidRecordIDException e) {
+				//#debug error
+				System.out.println("Unable to compare to records" + e);
+				return 0;
+			}
+		}
+		
+	}
+
 }

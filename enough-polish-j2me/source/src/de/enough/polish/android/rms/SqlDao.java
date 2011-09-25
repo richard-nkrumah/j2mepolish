@@ -8,8 +8,7 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteDatabase.CursorFactory;
-import de.enough.polish.android.lcdui.AndroidDisplay;
-import de.enough.polish.android.midlet.MIDlet;
+import de.enough.polish.android.midlet.MidletBridge;
 
 /**
  * This DAO manages one database. It is a singleton and is only valid for one application.
@@ -195,7 +194,7 @@ public class SqlDao {
 	}
 	
 	private void init() {
-		Context context = AndroidDisplay.getDisplay(MIDlet.midletInstance).getContext();
+		Context context = MidletBridge.getInstance();
 		SQLiteOpenHelper recordStoreSqliteOpenHelper = new RecordStoreSqliteOpenHelper(context, "recordstoredb", null, 3);
 		database = recordStoreSqliteOpenHelper.getWritableDatabase();
 	}
@@ -234,7 +233,7 @@ public class SqlDao {
 
 	/**
 	 * 
-	 * @param recordStoreFk the primary key of the recordstore this record is created in. This value must be valid as it is not cheched.
+	 * @param recordStoreFk the primary key of the recordstore this record is created in. This value must be valid as it is not checked.
 	 * @param data Must not be null.
 	 * @return the id of the added record
 	 * @throws RecordStoreException 
@@ -304,13 +303,14 @@ public class SqlDao {
 	 * @param recordStorePk
 	 * @param recordId
 	 * @return the data, or null
+	 * @throws InvalidRecordIDException 
 	 */
-	public synchronized byte[] getRecord(long recordStorePk, int recordId) {
+	public synchronized byte[] getRecord(long recordStorePk, int recordId) throws InvalidRecordIDException {
 		Cursor resultCursor = database.query(TABLENAME_RECORD,new String[] {COLUMNNAME_RECORD_DATA},COLUMNNAME_RECORD_RECORDNUMBER+"=? AND "+COLUMNNAME_RECORD_RECORDSTORE_FK+"=?",new String[] {Long.toString(recordId),Long.toString(recordStorePk)},null,null,null);
 		byte[] data;
 		try {
 			if(resultCursor.getCount() == 0) {
-				return null;
+				throw new InvalidRecordIDException("for " + recordId);
 			}
 			resultCursor.moveToFirst();
 			data = resultCursor.getBlob(0);
@@ -358,8 +358,9 @@ public class SqlDao {
 		int version = recordStore.getVersion() + 1;
 		values.put(COLUMNNAME_RECORDSTORE_SIZE, new Integer(size));
 		values.put(COLUMNNAME_RECORDSTORE_VERSION, new Integer(version));
+		values.put(COLUMNNAME_RECORDSTORE_NUMBER_OF_RECORDS, new Integer(recordStore.getNumRecords()-1));
 		database.update(TABLENAME_RECORDSTORE, values, COLUMNNAME_RECORDSTORE_RECORDSTORE_PK + "= ?" , new String[] {Long.toString(recordStorePk)});
-		database.delete(TABLENAME_RECORD,COLUMNNAME_RECORD_RECORDNUMBER+"=? AND "+COLUMNNAME_RECORD_RECORDSTORE_FK+"=?",new String[] {Integer.toString(recordId),Long.toString(recordStorePk)});
+		database.delete(TABLENAME_RECORD,COLUMNNAME_RECORD_RECORDNUMBER+"=? AND "+COLUMNNAME_RECORD_RECORDSTORE_FK+"=?", new String[] {Integer.toString(recordId),Long.toString(recordStorePk)});
 	}
 
 	public synchronized int[] getRecordIdsForRecordStore(long recordStorePk) {

@@ -213,7 +213,6 @@ info {
 	padding: 3;
 	padding-left: 5;
 	padding-vertical: 1;
-	include-label: true;
 	layout: left | expand;
 	textfield-caret-color: red;
 	predictive-choice-orientation: top;
@@ -226,7 +225,19 @@ info {
 }
 
 .input:hover {
-	include-label: false;
+	background {
+		type: round-rect;
+		color: white;
+	}
+}
+
+
+
+.pinInput extends input {
+	margin-left: 10%;
+}
+
+.pinInput:hover {
 	background {
 		type: round-rect;
 		color: white;

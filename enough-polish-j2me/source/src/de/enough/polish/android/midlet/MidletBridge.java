@@ -6,9 +6,12 @@ import java.util.HashMap;
 import java.util.Locale;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.ContextWrapper;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
@@ -24,9 +27,11 @@ import android.telephony.CellLocation;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.telephony.gsm.GsmCellLocation;
+import android.util.DisplayMetrics;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.ViewParent;
 import android.view.Window;
 import android.view.WindowManager;
@@ -36,6 +41,7 @@ import android.widget.TextView;
 import de.enough.polish.android.helper.ResourcesHelper;
 import de.enough.polish.android.io.ConnectionNotFoundException;
 import de.enough.polish.android.lcdui.AndroidDisplay;
+import de.enough.polish.android.lcdui.CanvasBridge;
 import de.enough.polish.ui.Command;
 import de.enough.polish.ui.Container;
 import de.enough.polish.ui.Display;
@@ -44,6 +50,7 @@ import de.enough.polish.ui.Item;
 import de.enough.polish.ui.Screen;
 import de.enough.polish.ui.Style;
 import de.enough.polish.util.IdentityArrayList;
+
 
 /**
  * A MIDlet is a MID Profile application.
@@ -105,7 +112,9 @@ public class MidletBridge extends Activity {
 
 	private boolean shuttingDown;
 	
-	private boolean isSoftkeyboardOpen;
+//	private boolean isSoftkeyboardOpen;
+
+	private int currentScreenYOffset;
 
 	private boolean suicideOnExit =
 		//#if polish.android.killProcessOnExit:defined
@@ -114,19 +123,14 @@ public class MidletBridge extends Activity {
 			true
 		//#endif
 	;
+	private boolean isSoftKeyboardShown;
 	private static MIDlet midlet;
 	
 
 //	private PowerManager.WakeLock wakeLock;
 
 	/**
-	 * Protected constructor for subclasses. The application management software
-	 * is responsible for creating MIDlets and creation of MIDlets is
-	 * restricted. MIDlets should not attempt to create other MIDlets.
-	 * 
-	 * @throws SecurityException -
-	 *             unless the application management software is creating the
-	 *             MIDlet.
+	 * Creates a new MIDlet Bridge
 	 */
 	public MidletBridge() {
 		instance = this;
@@ -135,6 +139,7 @@ public class MidletBridge extends Activity {
 		//#= this.appProperties.put("MIDlet-Vendor", "${MIDlet-Vendor}");
 		//#= this.appProperties.put("MIDlet-Version", "${MIDlet-Version}");
 		//#= this.appProperties.put("microedition.pim.version", "1.0");
+		
 	}
 	
 	public void openOptionsMenu() {
@@ -154,12 +159,16 @@ public class MidletBridge extends Activity {
 		super.onCreate(icicle);
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
 		//#if polish.android.hideStatusBar
-		getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, 
-				WindowManager.LayoutParams.FLAG_FULLSCREEN);
+			getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, 
+					WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		//#endif
-		//TODO: Remove this as we do not want to shrink the application on softkeyboard display.
-//		getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
-		
+		// shrink the application on softkeyboard display:
+		getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+		DisplayMetrics metrics = new DisplayMetrics();
+		getWindowManager().getDefaultDisplay().getMetrics(metrics);
+		CanvasBridge.DISPLAY_HEIGHT_PIXEL = metrics.heightPixels;
+		CanvasBridge.DISPLAY_WIDTH_PIXEL = metrics.widthPixels;
+		//System.out.println("METRICS: DESIRED=" + desiredWindowWidth + "x" + desiredWindowHeight + ", defaultDisplay=" + CanvasBridge.DISPLAY_WIDTH_PIXEL + "x" + CanvasBridge.DISPLAY_HEIGHT_PIXEL);
 		setVolumeControlStream(AudioManager.STREAM_MUSIC);
 		
 		TelephonyManager telephonyManager = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
@@ -213,7 +222,6 @@ public class MidletBridge extends Activity {
 			this.contentResolver = getContentResolver();
 		}
 		
-		
 		// read files directory and save it as a system property
 		String appDirectory = getApplicationContext().getFilesDir().getAbsolutePath();
 		setSystemProperty("fileconn.dir.private", appDirectory);
@@ -226,7 +234,7 @@ public class MidletBridge extends Activity {
 		// rickyn: This initialization fixes the bootstrap problem for GameCanvas.
 		new AndroidDisplay(this);
 		// This variable is needed to set the midlet to the display. Do not remove!
-		Display display = Display.getDisplay(null);
+		Display display = null; //Display.getDisplay(null);
 		
 		// now create MIDlet:
 		try {
@@ -236,9 +244,14 @@ public class MidletBridge extends Activity {
 				//#= midlet = (MIDlet) Class.forName("${polish.classes.midlet-1}").newInstance();		
 			//#endif
 			midlet._setMidletBridge(this);
+			//#if true
+				//# display = Display.getDisplay(midlet);
+			//#endif
 		} catch (Exception e) {
+			System.err.println("While loading MIDlet: " + e );
 			e.printStackTrace();
 			notifyDestroyed();
+			return;
 		}
 		
 		//#if polish.android.trapHomeButton
@@ -296,11 +309,16 @@ public class MidletBridge extends Activity {
 	@Override
 	public void onConfigurationChanged(Configuration newConfig) {
 		super.onConfigurationChanged(newConfig);
-		//#debug
+		// #debug
 		System.out.println("Config changed:"+newConfig);
+		
 		Locale locale = newConfig.locale;
 		String language = locale.getLanguage();
-		setSystemProperty("microedition.locale", language);
+		String previousLanguage = System.getProperty("microedition.locale");
+		if (!language.equals(previousLanguage)) {
+			setSystemProperty("microedition.locale", language);
+			//TODO reload resources when dynamic translations are used
+		}
 	}
 
 	/* (non-Javadoc)
@@ -361,7 +379,7 @@ public class MidletBridge extends Activity {
 		
 		AndroidDisplay display = AndroidDisplay.getDisplay(midlet);
 		if(display.getParent() == null) {
-			setContentView(display);
+		setContentView(display);
 		}
 		// This should allow to control the audio volume with the volume keys on the handset when the application has focus.
 		setVolumeControlStream(AudioManager.STREAM_MUSIC);
@@ -381,6 +399,15 @@ public class MidletBridge extends Activity {
 		//#debug
 		System.out.println("onStart().");
 		super.onStart();
+		//Debug.startMethodTracing("skobbler");
+		// on resume will be called directly afterwards...
+//		try {
+//			midlet.startApp();
+//		} catch (Exception e) {
+//			//#debug fatal
+//			System.out.println("starApp() failed: " + e);
+//			//TODO: add fatal error handling here, e.g. by displaying system error message
+//		}
 	}
 
 	/*
@@ -428,7 +455,7 @@ public class MidletBridge extends Activity {
 				//
 			}
 		}
-		if(this.suicideOnExit) {
+		if (this.suicideOnExit) {
 			int myPid = Process.myPid();
 			Process.killProcess(myPid);
 		}
@@ -654,121 +681,28 @@ public class MidletBridge extends Activity {
 
 	public void showSoftKeyboard() {
 		//#debug
-		System.out.println("Handling showSoftKeyboard");
+		System.out.println("MidletBridge.showSoftKeyboard");
 		//#if polish.javaplatform >= Android/1.5
-			
-			Configuration configuration;
-			configuration = getBaseContext().getResources().getConfiguration();
-			//#debug
-			System.out.println("Configuration before showing softkeyboard is '"+configuration+"'");
-		
-			if (this.isSoftkeyboardOpen) {
-				//#debug
-				System.out.println("Canceling the display of the softkeybard as it is already visible.");
-				return;
-			}
-			//#debug
-			System.out.println("About to show softkeyboard");
-			
-			// TODO: This code is not needed as android does this test for us?!
-//			if(configuration.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_NO) {
-//				//#debug
-//				System.out.println("Canceling the display of the softkeyboard because the hardkeyboard is already shown.");
-//				return;
-//			}
-			AndroidDisplay display = AndroidDisplay.getDisplay(midlet);
-			if(display == null) {
-				//#debug
-				System.out.println("Canceling the display of the softkeyboard as no AndroidDisplay is available.");
-				return;
-			}
 			InputMethodManager inputMethodManager = (InputMethodManager)getSystemService( Context.INPUT_METHOD_SERVICE);
-			boolean active;
-			active = inputMethodManager.isActive(display);
-			//#debug
-			System.out.println("Input method before showing is active: '"+active+"'");
-			// requestingFocus is important! Do not remove it!
-			display.requestFocus();
-			inputMethodManager.hideSoftInputFromWindow(display.getWindowToken(), 0, new ResultReceiver(display.getHandler()) {
-				@Override
-				protected void onReceiveResult(int resultCode, Bundle resultData) {
-					//#debug
-					System.out.println("Result for hiding softinput (before showing) is '"+resultCode+"' with resultData '"+resultData+"'");
-				}
-			});
-			inputMethodManager.showSoftInput(display, InputMethodManager.SHOW_FORCED,new ResultReceiver(display.getHandler()) {
-				@Override
-				protected void onReceiveResult(int resultCode, Bundle resultData) {
-					//#debug
-					System.out.println("Result for showing softinput is '"+resultCode+"' with resultData '"+resultData+"'");
-				}
-			});
-			active = inputMethodManager.isActive(display);
-			//#debug
-			System.out.println("Input method after showing is active: '"+active+"'");
-			configuration = getBaseContext().getResources().getConfiguration();
-			//#debug
-			System.out.println("Configuration after showing softkeyboard is '"+configuration+"'");
-			// TODO: Find out the height of the soft input!!
-//				View rootView = display.getRootView();
-//				ArrayList<View> touchables = rootView.getTouchables();
-//				if(touchables == null || touchables.isEmpty()) {
-//					//#debug
-//					System.out.println("No touchable view found in RootView.");
-//				} else {
-//					for (View view : touchables) {
-//						//#debug
-//						System.out.println("Found touchable view with id '"+view.getId()+"'");
-//					}
-//				}
-//				View focusView = rootView.findFocus();
-//				if(focusView != null) {
-//					//#debug
-//					System.out.println("View with focus is '"+focusView.getId()+"'");
-//				} else {
-//					//#debug
-//					System.out.println("No view with focus in RootView found.");
-//				}
-//				Window window = getWindow();
-			this.isSoftkeyboardOpen = true;
-			onSoftKeyboardOpened();
+			View focusedView = AndroidDisplay.getInstance().findFocus();
+			//System.out.println("focused view=" + focusedView + ", softkeyboard.active=" + inputMethodManager.isActive());
+			if (focusedView != null) {
+				inputMethodManager.showSoftInput(focusedView, InputMethodManager.SHOW_FORCED);
+			}
 		//#endif
 	}
 
 	public void hideSoftKeyboard() {
 		//#debug
-		System.out.println("Handling hideSoftKeyboard");
-
+		System.out.println("MidletBridge.hideSoftKeyboard");
 		//#if polish.javaplatform >= Android/1.5
-		Configuration configuration;
-		configuration = getBaseContext().getResources().getConfiguration();
-		//#debug
-		System.out.println("Configuration before hiding softkeyboard is '"+configuration+"'");
-		
-		// TODO: Do not use a self managed field but the configuration or InputMethodManager.isActive or something similar.
-		if (!this.isSoftkeyboardOpen) {
-			//#debug
-			System.out.println("Canceling the hiding of the softkeyboard as it is not visible anyway.");
-			return;
-		}
-		//#debug
-		System.out.println("About to hide softkeyboard");
-		AndroidDisplay display = AndroidDisplay.getDisplay(midlet);
-		InputMethodManager inputMethodManager = (InputMethodManager)getSystemService( Context.INPUT_METHOD_SERVICE);
-		boolean active;
-		active = inputMethodManager.isActive(display);
-		//#debug
-		System.out.println("Input method before hiding is active: '"+active+"'");
-		IBinder windowToken = display.getWindowToken();
-		inputMethodManager.hideSoftInputFromWindow(windowToken, 0);
-		active = inputMethodManager.isActive(display);
-		//#debug
-		System.out.println("Input method after hiding is active: '"+active+"'");
-		configuration = getBaseContext().getResources().getConfiguration();
-		//#debug
-		System.out.println("Configuration after hiding softkeyboard is '"+configuration+"'");
-		this.isSoftkeyboardOpen = false;
-		onSoftKeyboardClosed();
+			InputMethodManager inputMethodManager = (InputMethodManager)getSystemService( Context.INPUT_METHOD_SERVICE);
+			View focusedView = AndroidDisplay.getInstance().findFocus();
+			if (focusedView != null) {
+				//System.out.println("focused view=" + focusedView + ", softkeyboard.active=" + inputMethodManager.isActive());
+				IBinder windowToken = focusedView.getWindowToken();
+				inputMethodManager.hideSoftInputFromWindow(windowToken, 0);
+			}
 		//#endif
 	}
 	
@@ -780,43 +714,11 @@ public class MidletBridge extends Activity {
 		System.out.println("Handling toggleSoftKeyboard");
 
 		//#if polish.javaplatform >= Android/1.5
-		
 			InputMethodManager inputMethodManager = (InputMethodManager)getSystemService( Context.INPUT_METHOD_SERVICE);
-			Configuration configuration;
-//			if(configuration.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_NO) {
-//				if(this.isSoftkeyboardOpen) {
-//					hideSoftKeyboard();
-//				}
-//				return;
-//			}
-			configuration = getBaseContext().getResources().getConfiguration();
-			//#debug
-			System.out.println("Configuration before toggling softkeyboard is '"+configuration+"'");
-			
-			AndroidDisplay display = AndroidDisplay.getDisplay(midlet);
-//			boolean active = inputMethodManager.isActive(display);
-//			if(active) {
-			IBinder windowToken = display.getWindowToken();
-			boolean active;
-			active = inputMethodManager.isActive(display);
-			//#debug
-			System.out.println("Input method before toggle is active: '"+active+"'");
-			//#debug
-			System.out.println("Toggling the softinput method.");
-			inputMethodManager.toggleSoftInputFromWindow(windowToken,  InputMethodManager.SHOW_FORCED, 0);
-				//inputMethodManager.hideSoftInputFromWindow(windowToken, 0);			
-//			}
-			active = inputMethodManager.isActive(display);
-			//#debug
-			System.out.println("Input method after toogle is active: '"+active+"'");
-			configuration = getBaseContext().getResources().getConfiguration();
-			//#debug
-			System.out.println("Configuration after toggling softkeyboard is '"+configuration+"'");
-			this.isSoftkeyboardOpen = !this.isSoftkeyboardOpen;
-			if (this.isSoftkeyboardOpen) {
-				onSoftKeyboardOpened();
-			} else {
-				onSoftKeyboardClosed();
+			View focusedView = AndroidDisplay.getInstance().findFocus();
+			if (focusedView != null) {
+				IBinder windowToken = focusedView.getWindowToken();
+				inputMethodManager.toggleSoftInputFromWindow(windowToken,  InputMethodManager.SHOW_FORCED, 0);
 			}
 		//#endif
 	}
@@ -826,9 +728,13 @@ public class MidletBridge extends Activity {
 	 * Determines whether the softkeyboard is currently shown
 	 * @return true when the virtual keyboard is shown
 	 */
-	public boolean isSoftKeyboadShown() {
-		// TODO ricky implement isSoftKeyboadShown
-		return this.isSoftkeyboardOpen;
+	public boolean isSoftKeyboardShown() {
+		// this works only for the first time, when a softkeyboard has not been shown yet:
+//		InputMethodManager inputMethodManager = (InputMethodManager)getSystemService( Context.INPUT_METHOD_SERVICE);
+//		View focusedView = AndroidDisplay.getInstance().findFocus();
+//		boolean isActive = inputMethodManager.isActive(focusedView);
+//		return isActive;
+		return this.isSoftKeyboardShown;
 	}
 
 	
@@ -844,44 +750,44 @@ public class MidletBridge extends Activity {
 		return (Screen) disp;
 	}
 	
-	private void onSoftKeyboardOpened() {
-		Screen screen = getCurrentScreen();
-		if (screen != null) {
-			Container rootContainer = screen.getRootContainer();
-			if (rootContainer != null) {
-				Item item = rootContainer.getFocusedChild();
-				if (item != null) {
-					int absY = item.getAbsoluteY();
-					int screenHeight = screen.getScreenHeight();
-					if (absY > screenHeight / 3) {
-						int newYOffset = - item.relativeY;
-						int contHeight = rootContainer.getItemAreaHeight();
-						if (contHeight < screen.getScreenContentHeight()) {
-							newYOffset -= rootContainer.relativeY - screen.getScreenContentY();
-						}
-						
-						screen.setScrollYOffset( newYOffset, true);
-						rootContainer.resetLastPointerPressYOffset();
-					}
-				}
-			}
-		}
-	}
-
-	private void onSoftKeyboardClosed() {
-		Screen screen = getCurrentScreen();
-		if (screen != null) {
-			Container rootContainer = screen.getRootContainer();
-			if (rootContainer != null) {
-				int contHeight = rootContainer.getItemAreaHeight();
-				if (contHeight < screen.getScreenContentHeight()) {
-					// only reset the scroll y offset for screens that use less space than is available:
-					rootContainer.setScrollYOffset(0, true);
-					rootContainer.resetLastPointerPressYOffset();
-				}
-			}
-		}
-	}
+//	private void onSoftKeyboardOpened() {
+//		Screen screen = getCurrentScreen();
+//		if (screen != null) {
+//			Container rootContainer = screen.getRootContainer();
+//			if (rootContainer != null) {
+//				Item item = rootContainer.getFocusedChild();
+//				if (item != null) {
+//					int absY = item.getAbsoluteY();
+//					int screenHeight = screen.getScreenHeight();
+//					if (absY > screenHeight / 3) {
+//						int newYOffset = - item.relativeY;
+//						int contHeight = rootContainer.getItemAreaHeight();
+//						if (contHeight < screen.getScreenContentHeight()) {
+//							newYOffset -= rootContainer.relativeY - screen.getScreenContentY();
+//	}
+//
+//						screen.setScrollYOffset( newYOffset, true);
+//						rootContainer.resetLastPointerPressYOffset();
+//					}
+//				}
+//			}
+//		}
+//	}
+//
+//	private void onSoftKeyboardClosed() {
+//		Screen screen = getCurrentScreen();
+//		if (screen != null) {
+//			Container rootContainer = screen.getRootContainer();
+//			if (rootContainer != null) {
+//				int contHeight = rootContainer.getItemAreaHeight();
+//				if (contHeight < screen.getScreenContentHeight()) {
+//					// only reset the scroll y offset for screens that use less space than is available:
+//					rootContainer.setScrollYOffset(0, true);
+//					rootContainer.resetLastPointerPressYOffset();
+//	}
+//			}
+//		}
+//	}
 
 	/**
 	 * 
@@ -896,11 +802,12 @@ public class MidletBridge extends Activity {
 		inputMethodManager.showInputMethodPicker();
 	}
 
-	public void onSizeChanged( int w, int h) {
-		//#if polish.javaplatform >= Android/1.5
-			hideSoftKeyboard();
-			this.isSoftkeyboardOpen = false;
-		//#endif
+	public void onSizeChanged( int w, int h, int oldW, int oldH) {
+		if (h < oldH) {
+			this.isSoftKeyboardShown = true;
+		} else {
+			this.isSoftKeyboardShown = false;	
+		}
 	}
 	
 	
@@ -969,7 +876,24 @@ public class MidletBridge extends Activity {
 				break;
 			}
 			if (bridge.menuItem == item) {
-				Display.getInstance().commandAction(bridge.cmd, (de.enough.polish.ui.Displayable)null );
+				final Command cmd = bridge.cmd;
+				if (cmd.hasSubCommands()) {
+					AlertDialog.Builder builder = new AlertDialog.Builder(MidletBridge.getInstance());
+					builder.setTitle(cmd.getLabel());
+					String[] labels = new String[ cmd.getSubCommandsCount() ];
+					Object[] subCommands = cmd.getSubCommmandsArray();
+					for (int j = 0; j < labels.length; j++) {
+						labels[j] = ((Command)subCommands[j]).getLabel();
+					}
+					builder.setItems(labels, new DialogInterface.OnClickListener() {
+					    public void onClick(DialogInterface dialog, int itemIndex) {
+					    	Display.getInstance().commandAction(cmd.getSubCommands()[itemIndex], (de.enough.polish.ui.Displayable)null );
+					    }
+					});
+					builder.show();
+				} else {
+					Display.getInstance().commandAction(cmd, (de.enough.polish.ui.Displayable)null );
+				}
 				return true;
 			}
 		}
@@ -992,7 +916,7 @@ public class MidletBridge extends Activity {
 			return false;
 		}
 		//#if polish.javaplatform >= Android/1.5
-			if (this.isSoftkeyboardOpen) {
+			if (isSoftKeyboardShown()) {
 				hideSoftKeyboard();
 				return true;
 			}
@@ -1061,6 +985,11 @@ public class MidletBridge extends Activity {
 			this.menuItem = menuItem;
 		}
 		
+	}
+
+
+	public static MidletBridge getInstance() {
+		return instance;
 	}
 
 

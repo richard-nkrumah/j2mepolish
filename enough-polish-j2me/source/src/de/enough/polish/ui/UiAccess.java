@@ -4103,14 +4103,18 @@ public final class UiAccess {
 	}
 	//#endif
 	
-	//#if polish.usePolishGui && polish.TextField.useDirectInput && polish.TextField.supportSymbolsEntry && !polish.blackberry
+	//#if polish.usePolishGui
 	/**
 	 * Initializes the symbols list and returns it 
 	 * @return the symbols list
 	 */
 	public static List getTextFieldSymbols() {
-		TextField.initSymbolsList();
-		return TextField.symbolsList;
+		List result = null;
+		//#if polish.TextField.useDirectInput && polish.TextField.supportSymbolsEntry && !(polish.blackberry || polish.android)
+			TextField.initSymbolsList();
+			result = TextField.symbolsList;
+		//#endif
+		return result;
 	}
 	//#endif
 		
@@ -4309,6 +4313,39 @@ public final class UiAccess {
 	}
 	//#endif
 
+	//#if polish.usePolishGui && polish.midp
+	/**
+	 * Casts the given MIDP Displayable into a J2ME Polish Displayable
+	 * @param disp the displayable
+	 * @return the casted displayable
+	 */
+	public static Display cast(javax.microedition.lcdui.Display disp)
+	{
+		return null;
+	}
+	//#endif
+	
+	//#if polish.usePolishGui
+	/**
+	 * Casts the given J2ME Polish Displayable into a MIDP Displayable
+	 * @param disp the displayable
+	 * @return the casted displayable
+	 */
+	public static 
+	//#if polish.LibraryBuild
+		javax.microedition.lcdui.Display
+	//#else
+		//# Display
+	//#endif
+	cast(Display disp)
+	{
+		//#if polish.LibraryBuild
+			return null;
+		//#else
+			//# return disp;
+		//#endif
+	}
+	//#endif
 
 	//#if polish.usePolishGui && polish.midp
 	/**
@@ -5424,6 +5461,31 @@ public final class UiAccess {
 		// ignore
 	}
 	//#endif
+	
+	//#if polish.midp
+	/**
+	 * Paints the content of the specified Canvas.
+	 * 
+	 * @param canvas the canvas that should be painted
+	 * @param g the Graphics on which the canvas should be painted.
+	 */
+	public static void paint(javax.microedition.lcdui.Canvas canvas, Graphics g) {
+		// ignore
+	}
+	//#endif
+	
+	//#if polish.usePolishGui
+	/**
+	 * Paints the content of the specified Canvas.
+	 * 
+	 * @param canvas the canvas that should be painted
+	 * @param g the Graphics on which the canvas should be painted.
+	 */
+	public static void paint(Canvas canvas, Graphics g) {
+		canvas.paint(g);
+	}
+	//#endif
+
 	
 	/**
 	 * Returns the current left margin of the given item

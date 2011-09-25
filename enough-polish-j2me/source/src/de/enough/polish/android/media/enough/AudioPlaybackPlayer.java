@@ -4,8 +4,10 @@ package de.enough.polish.android.media.enough;
 import java.io.IOException;
 
 import android.content.Context;
+import android.content.res.AssetFileDescriptor;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import de.enough.polish.android.helper.ResourceInputStream;
 import de.enough.polish.android.media.Control;
 import de.enough.polish.android.media.MediaException;
 import de.enough.polish.android.media.control.VolumeControl;
@@ -15,25 +17,38 @@ public class AudioPlaybackPlayer extends AbstractPlayer implements VolumeControl
 
 	private final MediaPlayer mediaPlayer;
 	private final AudioManager androidAudioManager;
+	private String locator;
+	private ResourceInputStream locatorStream;
 	
 	public AudioPlaybackPlayer(String locator) throws MediaException {
 		this.mediaPlayer = new MediaPlayer();
 		this.mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-		if(locator == null) {
-			throw new RuntimeException("The parameter 'locator' must not be null.");
-		}
-		if(locator.startsWith("http://")){
+		this.locator = locator; 
+		if(locator != null){
 			try {
 				this.mediaPlayer.setDataSource(locator);
-			} catch (IllegalArgumentException e) {
-				throw new MediaException(e.getMessage());
-			} catch (IllegalStateException e) {
-				throw new MediaException(e.getMessage());
-			} catch (IOException e) {
-				throw new MediaException(e.getMessage());
+			} catch (Exception e) {
+				//#debug error
+				System.out.println("Unable to start audio player for " + locator + e);
+				throw new MediaException(e.toString());
 			}
 		}
 		this.androidAudioManager = (AudioManager)MidletBridge.instance.getSystemService(Context.AUDIO_SERVICE);
+	}
+
+	public AudioPlaybackPlayer(ResourceInputStream stream) throws MediaException {
+		this((String)null);
+		this.locatorStream = stream;
+		try {
+			AssetFileDescriptor descriptor = MidletBridge.getInstance().getAssets().openFd( stream.getCleanedResourceUrl() );
+			this.mediaPlayer.setDataSource( descriptor.getFileDescriptor(), descriptor.getStartOffset(), descriptor.getDeclaredLength() );
+			descriptor.close();
+		} catch (Exception e) {
+			//#debug error
+			System.out.println("Unable to initialize player for " + stream.getResourceUrl() + e);
+			throw new MediaException(e.toString());
+		}
+		
 	}
 
 	protected void doClose() {
@@ -42,6 +57,19 @@ public class AudioPlaybackPlayer extends AbstractPlayer implements VolumeControl
 
 	protected void doDeallocate() {
 		this.mediaPlayer.reset();
+		// now move player into initialized state again:
+		try {
+			if (this.locatorStream != null) {
+				AssetFileDescriptor descriptor = MidletBridge.getInstance().getAssets().openFd( this.locatorStream.getCleanedResourceUrl() );
+				this.mediaPlayer.setDataSource( descriptor.getFileDescriptor(), descriptor.getStartOffset(), descriptor.getDeclaredLength() );
+				descriptor.close();
+			} else if (this.locator != null) {
+				this.mediaPlayer.setDataSource(this.locator);
+			}
+		} catch (Exception e) {
+			//#debug error
+			System.out.println("Unable to deallocate/init player" + e);
+		}
 	}
 
 	protected String doGetContentType() {
@@ -56,7 +84,7 @@ public class AudioPlaybackPlayer extends AbstractPlayer implements VolumeControl
 		try {
 			this.mediaPlayer.prepare();
 		} catch (IllegalStateException e) {
-			throw new MediaException(e.getMessage());
+			throw new MediaException(e.getMessage() + ", MIDP State is " + this.meState);
 		} catch (IOException e) {
 			throw new MediaException(e.getMessage());
 		}
@@ -91,10 +119,10 @@ public class AudioPlaybackPlayer extends AbstractPlayer implements VolumeControl
 	}
 
 	public int setLevel(int level) {
-		if(level < 0) {
+		if (level < 0) {
 			level = 0;
 		}
-		if(level > 100) {
+		if (level > 100) {
 			level = 100;
 		}
 		int androidMaxVolume = this.androidAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
@@ -119,8 +147,7 @@ public class AudioPlaybackPlayer extends AbstractPlayer implements VolumeControl
 	}
 
 	protected void doStarted() {
-		// TODO Auto-generated method stub
-		
+		// not required
 	}
 
 }

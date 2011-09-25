@@ -268,6 +268,7 @@ These namespaces/schemas will be used soon.
     <capability name="JavaPlatform" value="MIDP/2.0, JTWI/1.0" />
     <capability name="JavaConfiguration" value="CLDC/1.1" />
     <capability name="JavaPackage" value="btapi, fileconnection,mmapi,wmapi" />
+    <capability name="OptionalPackage" value="nokia-ui,samsung" />
     <capability name="SoundFormat" value="midi, amr, wav" />
     <capability name="HeapSize" value="1MB" />
     <capability name="key.LeftSoftKeys" value="-6,-21,21,57345,-1,-202" />
@@ -340,18 +341,14 @@ These namespaces/schemas will be used soon.
   
   <device supportsPolishGui="true">
     <identifier>Generic/AnyMsaBasicPhone</identifier>
+    <parent>Generic/AnyPhone</parent>
     <description>A MIDP 2.0 and CLDC 1.1 phone that supports softkeys and the fullscreen mode and the JTWI standard. Use this phone to run a single application on various platforms like Nokia, Motorola, Samsung and so on.</description>
     <features>isVirtual, hasPointerEvents, hasCommandKeyEvents, isDynamic</features>
     <capability name="JavaPlatform" value="MIDP/2.0, MSA/1.0" />
     <capability name="JavaConfiguration" value="CLDC/1.1" />
-    <capability name="JavaPackage" value="mmapi,wmapi" />
+    <capability name="JavaPackage" value="mmapi,wmapi,fileconnection" />
     <capability name="SoundFormat" value="midi, amr, wav" />
     <capability name="HeapSize" value="1MB" />
-    <capability name="key.LeftSoftKeys" value="-6,-21,21,57345,-1,-202" />
-    <capability name="key.RightSoftKeys" value="-7,-22,22,57346,-4,-203" />
-    <capability name="key.maybeSupportsAsciiKeyMap" value="true" />
-    <capability name="MenuBar.OptionsPosition" value="left" />
-    <capability name="Bugs" value="SoftKeyMappedToFire,noSoftKeyReleasedEvents,displaySetCurrentFlickers,needsBottomOrientiationForStringDrawing,BacklightRequiresLightOff" />
   </device>
   <device supportsPolishGui="true">
     <identifier>Generic/AnyMsaBasicPhone_240x320</identifier>
@@ -374,18 +371,12 @@ These namespaces/schemas will be used soon.
   
   <device supportsPolishGui="true">
     <identifier>Generic/AnyMsaPhone</identifier>
+    <parent>Generic/AnyMsaBasicPhone</parent>
     <description>A MIDP 2.0 and CLDC 1.1 phone that supports softkeys and the fullscreen mode and the JTWI standard. Use this phone to run a single application on various platforms like Nokia, Motorola, Samsung and so on.</description>
     <features>isVirtual, hasPointerEvents, hasCommandKeyEvents, isDynamic</features>
     <capability name="JavaPlatform" value="MIDP/2.0, MSA/1.0" />
     <capability name="JavaConfiguration" value="CLDC/1.1" />
     <capability name="JavaPackage" value="JSR238, JSR234, JSR211, JSR180, JSR179, JSR177, JSR172" />
-    <capability name="SoundFormat" value="midi, amr, wav" />
-    <capability name="HeapSize" value="1MB" />
-    <capability name="key.LeftSoftKeys" value="-6,-21,21,57345,-1,-202" />
-    <capability name="key.RightSoftKeys" value="-7,-22,22,57346,-4,-203" />
-    <capability name="key.maybeSupportsAsciiKeyMap" value="true" />
-    <capability name="MenuBar.OptionsPosition" value="left" />
-    <capability name="Bugs" value="SoftKeyMappedToFire,noSoftKeyReleasedEvents,displaySetCurrentFlickers,needsBottomOrientiationForStringDrawing,BacklightRequiresLightOff" />
   </device>
   <device supportsPolishGui="true">
     <identifier>Generic/AnyMsaPhone_240x320</identifier>
@@ -507,6 +498,15 @@ These namespaces/schemas will be used soon.
   </device>
 
   <device supportsPolishGui="true">
+    <identifier>Generic/android2.0.1</identifier>
+    <features>isVirtual</features>
+    <description>An Android compatible device with the 2.0.1 firmware.</description>
+    <groups>android</groups>
+    <capability name="JavaPlatform" value="Android/2.0.1" />
+    <capability name="JavaConfiguration" value="Android/2.0.1" />
+  </device>
+
+  <device supportsPolishGui="true">
     <identifier>Generic/android2.1</identifier>
     <features>isVirtual</features>
     <description>An Android compatible device with the 2.1 firmware.</description>
@@ -534,17 +534,171 @@ These namespaces/schemas will be used soon.
   </device>
 
   <device supportsPolishGui="true">
+    <identifier>Generic/android2.3_HVGA</identifier>
+    <parent>Generic/android2.3</parent>
+    <description>An Android compatible device with the 2.3 firmware and a HVGA screen/skin.</description>
+    <capability name="polish.Emulator.Skin" value="HVGA" />
+    <capability name="ScreenSize" value="320x480" />
+  </device>
+
+
+  <device supportsPolishGui="true">
+    <identifier>Generic/android2.3_QVGA</identifier>
+    <parent>Generic/android2.3</parent>
+    <description>An Android compatible device with the 2.3 firmware and a QVGA screen/skin.</description>
+    <capability name="polish.Emulator.Skin" value="QVGA" />
+    <capability name="ScreenSize" value="240x320" />
+  </device>
+
+
+  <device supportsPolishGui="true">
+    <identifier>Generic/android2.3_WQVGA400</identifier>
+    <parent>Generic/android2.3</parent>
+    <description>An Android compatible device with the 2.3 firmware and a WQVGA400 screen/skin.</description>
+    <capability name="polish.Emulator.Skin" value="WQVGA400" />
+    <capability name="ScreenSize" value="240x400" />
+  </device>
+
+  <device supportsPolishGui="true">
+    <identifier>Generic/android2.3_WQVGA432</identifier>
+    <parent>Generic/android2.3</parent>
+    <description>An Android compatible device with the 2.3 firmware and a WQVGA432 screen/skin.</description>
+    <capability name="polish.Emulator.Skin" value="WQVGA432" />
+    <capability name="ScreenSize" value="240x432" />
+  </device>
+  
+  <device supportsPolishGui="true">
+    <identifier>Generic/android2.3_WVGA800</identifier>
+    <parent>Generic/android2.3</parent>
+    <description>An Android compatible device with the 2.3 firmware and a WVGA800 screen/skin.</description>
+    <capability name="polish.Emulator.Skin" value="WVGA800" />
+    <capability name="ScreenSize" value="480x800" />
+  </device>
+
+  <device supportsPolishGui="true">
+    <identifier>Generic/android2.3_WVGA854</identifier>
+    <parent>Generic/android2.3</parent>
+    <description>An Android compatible device with the 2.3 firmware and a WVGA854 screen/skin.</description>
+    <capability name="polish.Emulator.Skin" value="WVGA854" />
+    <capability name="ScreenSize" value="480x854" />
+  </device>
+
+  <device supportsPolishGui="true">
+    <identifier>Generic/android2.3.3</identifier>
+    <features>isVirtual</features>
+    <description>An Android compatible device with the 2.3.3 firmware.</description>
+    <groups>android</groups>
+    <capability name="JavaPlatform" value="Android/2.3.3" />
+    <capability name="JavaConfiguration" value="Android/2.3.3" />
+  </device>
+
+  <device supportsPolishGui="true">
+    <identifier>Generic/android2.3.3_HVGA</identifier>
+    <parent>Generic/android2.3.3</parent>
+    <description>An Android compatible device with the 2.3.3 firmware and a HVGA screen/skin.</description>
+    <capability name="polish.Emulator.Skin" value="HVGA" />
+    <capability name="ScreenSize" value="320x480" />
+  </device>
+
+
+  <device supportsPolishGui="true">
+    <identifier>Generic/android2.3.3_QVGA</identifier>
+    <parent>Generic/android2.3.3</parent>
+    <description>An Android compatible device with the 2.3.3 firmware and a QVGA screen/skin.</description>
+    <capability name="polish.Emulator.Skin" value="QVGA" />
+    <capability name="ScreenSize" value="240x320" />
+  </device>
+
+
+  <device supportsPolishGui="true">
+    <identifier>Generic/android2.3.3_WQVGA400</identifier>
+    <parent>Generic/android2.3.3</parent>
+    <description>An Android compatible device with the 2.3.3 firmware and a WQVGA400 screen/skin.</description>
+    <capability name="polish.Emulator.Skin" value="WQVGA400" />
+    <capability name="ScreenSize" value="240x400" />
+  </device>
+
+  <device supportsPolishGui="true">
+    <identifier>Generic/android2.3.3_WQVGA432</identifier>
+    <parent>Generic/android2.3.3</parent>
+    <description>An Android compatible device with the 2.3.3 firmware and a WQVGA432 screen/skin.</description>
+    <capability name="polish.Emulator.Skin" value="WQVGA432" />
+    <capability name="ScreenSize" value="240x432" />
+  </device>
+  
+  <device supportsPolishGui="true">
+    <identifier>Generic/android2.3.3_WVGA800</identifier>
+    <parent>Generic/android2.3.3</parent>
+    <description>An Android compatible device with the 2.3.3 firmware and a WVGA800 screen/skin.</description>
+    <capability name="polish.Emulator.Skin" value="WVGA800" />
+    <capability name="ScreenSize" value="480x800" />
+  </device>
+
+  <device supportsPolishGui="true">
+    <identifier>Generic/android2.3.3_WVGA854</identifier>
+    <parent>Generic/android2.3.3</parent>
+    <description>An Android compatible device with the 2.3.3 firmware and a WVGA854 screen/skin.</description>
+    <capability name="polish.Emulator.Skin" value="WVGA854" />
+    <capability name="ScreenSize" value="480x854" />
+  </device>
+  
+  <device supportsPolishGui="true">
     <identifier>Generic/android3.0</identifier>
     <features>isVirtual</features>
     <description>An Android compatible device with the 3.0 firmware.</description>
     <groups>android</groups>
     <capability name="JavaPlatform" value="Android/3.0" />
     <capability name="JavaConfiguration" value="Android/3.0" />
+    <capability name="polish.Emulator.Skin" value="WXGA" />
+  </device>
+  
+  <device supportsPolishGui="true">
+    <identifier>Generic/android3.0_WXGA</identifier>
+    <parent>Generic/android3.0</parent>
+    <description>An Android compatible device with the 3.0 firmware and a WXGA screen/skin.</description>
+    <capability name="polish.Emulator.Skin" value="WXGA" />
+    <capability name="ScreenSize" value="1280x800" />
+  </device>
+  
+  <device supportsPolishGui="true">
+    <identifier>Generic/android3.1</identifier>
+    <features>isVirtual</features>
+    <description>An Android compatible device with the 3.1 firmware.</description>
+    <groups>android</groups>
+    <capability name="JavaPlatform" value="Android/3.1" />
+    <capability name="JavaConfiguration" value="Android/3.1" />
+    <capability name="polish.Emulator.Skin" value="WXGA" />
+  </device>
+  
+  <device supportsPolishGui="true">
+    <identifier>Generic/android3.1_WXGA</identifier>
+    <parent>Generic/android3.1</parent>
+    <description>An Android compatible device with the 3.1 firmware and a WXGA screen/skin.</description>
+    <capability name="polish.Emulator.Skin" value="WXGA" />
+    <capability name="ScreenSize" value="1280x800" />
+  </device>
+  
+  <device supportsPolishGui="true">
+    <identifier>Generic/android3.2</identifier>
+    <features>isVirtual</features>
+    <description>An Android compatible device with the 3.2 firmware.</description>
+    <groups>android</groups>
+    <capability name="JavaPlatform" value="Android/3.2" />
+    <capability name="JavaConfiguration" value="Android/3.2" />
+    <capability name="polish.Emulator.Skin" value="WXGA" />
+  </device>
+  
+  <device supportsPolishGui="true">
+    <identifier>Generic/android3.2_WXGA</identifier>
+    <parent>Generic/android3.2</parent>
+    <description>An Android compatible device with the 3.2 firmware and a WXGA screen/skin.</description>
+    <capability name="polish.Emulator.Skin" value="WXGA" />
+    <capability name="ScreenSize" value="1280x800" />
   </device>
   
    <device supportsPolishGui="true">
     <identifier>Generic/android</identifier>
-    <parent>Generic/android2.1</parent>
+    <parent>Generic/android2.3.3</parent>
   </device>
   
   <device supportsPolishGui="true">

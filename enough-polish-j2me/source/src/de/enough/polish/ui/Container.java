@@ -996,11 +996,14 @@ public class Container extends Item {
 		
 		if (!isInitialized() && this.autoFocusEnabled) {
 			// setting the index for automatically focusing the appropriate item
-			// during the initialisation:
+			// during the initialization:
 			//#debug
 			System.out.println("Container: Setting autofocus-index to " + index );
 			this.autoFocusIndex = index;
 		} 
+		if (this.isFocused) {
+			this.autoFocusEnabled = false;
+		}
 		
 		if (index == this.focusedIndex && item.isFocused && item == this.focusedItem) {
 			//#debug
@@ -1664,8 +1667,8 @@ public class Container extends Item {
 				} else {
 					item.relativeX = 0;
 				}				
-
 				myContentHeight += height != 0 ? height + this.paddingVertical : 0;
+				//System.out.println( i + ": height=" + height + ", myContentHeight=" + myContentHeight + ", item=" + item + ", style=" + (this.style == null ? "<none>" : this.style.name));
 				//System.out.println("item.yTopPos=" + item.yTopPos);
 			} // cycling through all items
 			
@@ -3396,9 +3399,9 @@ public class Container extends Item {
 		int origRelY = relY;
 		relY -= this.yOffset;
 		relY -= this.contentY;
-		//#ifdef polish.css.before
-			relX -= getBeforeWidthWithPadding();
-		//#endif
+//		//#ifdef polish.css.before
+//			relX -= getBeforeWidthWithPadding();
+//		//#endif
 		relX -= this.contentX;
 		//#ifdef tmp.supportViewType
 			int viewXOffset = 0;
@@ -3585,9 +3588,9 @@ public class Container extends Item {
 				this.needsCheckItemInVisibleContent=true;
 			//#endif
 		//#endif
-		//#ifdef polish.css.before
-			relX -= getBeforeWidthWithPadding();
-		//#endif
+//		//#ifdef polish.css.before
+//			relX -= getBeforeWidthWithPadding();
+//		//#endif
 		
 		Item item = this.focusedItem;
 		if (this.enableScrolling) {
@@ -3646,11 +3649,11 @@ public class Container extends Item {
 			}
 		}
 		// foward event to currently focused item:
-		int origRelX = relX
-		//#ifdef polish.css.before
-			+ getBeforeWidthWithPadding()
-		 //#endif
-		 ;
+		int origRelX = relX;
+//		//#ifdef polish.css.before
+//			+ getBeforeWidthWithPadding()
+//		 //#endif
+//		 ;
 		int origRelY = relY;
 		relY -= this.yOffset;
 		relY -= this.contentY;
@@ -3761,9 +3764,9 @@ public class Container extends Item {
 	protected boolean handlePointerDragged(int relX, int relY, ClippingRegion repaintRegion) {
 		//#debug
 		System.out.println("handlePointerDraggged " + relX + ", " + relY + " for " + this + ", enableScrolling=" + this.enableScrolling + ", focusedItem=" + this.focusedItem);
-		//#ifdef polish.css.before
-			relX -= getBeforeWidthWithPadding();
-		//#endif
+//		//#ifdef polish.css.before
+//			relX -= getBeforeWidthWithPadding();
+//		//#endif
 		
 		Item item = this.focusedItem;
 		if (item != null && item.handlePointerDragged( relX - this.contentX - item.relativeX, relY - this.yOffset - this.contentY - item.relativeY, repaintRegion)) {
@@ -3771,7 +3774,7 @@ public class Container extends Item {
 		}
 		//#ifdef tmp.supportViewType
 			if (this.containerView != null) {
-				if ( this.containerView.handlePointerDragged(relX,relY, repaintRegion) ) {
+				if ( this.containerView.handlePointerDragged(relX, relY, repaintRegion) ) {
 					return true;
 				}
 			}
@@ -3915,9 +3918,9 @@ public class Container extends Item {
 	 */
 	public Item getItemAt(int relX, int relY) {
 		relY -= this.yOffset;
-		//#ifdef polish.css.before
-			relX -= getBeforeWidthWithPadding();
-		//#endif
+//		//#ifdef polish.css.before
+//			relX -= getBeforeWidthWithPadding();
+//		//#endif
 		relX -= this.contentX;
 		relY -= this.contentY;
 		//#ifdef tmp.supportViewType
@@ -3979,9 +3982,9 @@ public class Container extends Item {
 	 */
 	protected Item getChildAtImpl(int relX, int relY) {
 		relY -= this.yOffset;
-		//#ifdef polish.css.before
-			relX -= getBeforeWidthWithPadding();
-		//#endif
+//		//#ifdef polish.css.before
+//			relX -= getBeforeWidthWithPadding();
+//		//#endif
 		relY -= this.contentY;
 		relX -= this.contentX;
 		//#ifdef tmp.supportViewType
