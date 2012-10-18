@@ -112,15 +112,12 @@ public class Trie implements Externalizable {
 			buffer.append(toString());
 			buffer.append("\n");
 			if (this.firstChild != null) {
-				for (int i = 0; i < indent; i++) {
-					buffer.append(" ");
-				}
 				this.firstChild.print(indent + 2, buffer);
 			}
 			if (this.nextSibling != null) {
-				for (int i = 0; i < indent; i++) {
-					buffer.append(" ");
-				}
+//				for (int i = 0; i < indent; i++) {
+//					buffer.append(" ");
+//				}
 				this.nextSibling.print(indent, buffer);
 			}
 		}
