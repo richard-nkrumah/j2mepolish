@@ -131,7 +131,6 @@ public class Trie implements Externalizable {
 
 	private static final short FORMAT_LOOKAT_CHILD = 2;
 	private static final short FORMAT_LOOKAT_SIBLING = 1;
-	private static final short FORMAT_LOOKAT_LEAF = 0;
 	
 	private Node root = new Node((char) 0);
 	private boolean longestMatchOption = true;
@@ -409,6 +408,10 @@ public class Trie implements Externalizable {
 		return true;
 	}
 	
+	/**
+	 * Helper method for unit tests to inspect the internal state of this object.
+	 * @return
+	 */
 	Node getRootNode() {
 		return this.root;
 	}
