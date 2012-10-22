@@ -52,7 +52,39 @@ public class Trie implements Externalizable {
 	 * @author rickyn
 	 */
 	static class Node {
-		@Override
+		public char character;
+		public Node nextSibling;
+		public Node firstChild;
+		public String word;
+
+		public Node(char character) {
+			this.character = character;
+		}
+
+		public String toString() {
+			return "Node={character:'" + ((this.character >= 33 && this.character <= 126) ? this.character + "" : "0x" + Integer.toHexString(this.character)) + "',word:'" + this.word + "'}";
+		}
+
+		public String print() {
+			StringBuffer buffer = new StringBuffer();
+			print0(0, buffer);
+			return buffer.toString();
+		}
+
+		public void print0(int indent, StringBuffer buffer) {
+			for (int i = 0; i < indent; i++) {
+				buffer.append(" ");
+			}
+			buffer.append(toString());
+			buffer.append("\n");
+			if (this.firstChild != null) {
+				this.firstChild.print0(indent + 2, buffer);
+			}
+			if (this.nextSibling != null) {
+				this.nextSibling.print0(indent, buffer);
+			}
+		}
+
 		public int hashCode() {
 			final int prime = 31;
 			int result = 1;
@@ -63,7 +95,6 @@ public class Trie implements Externalizable {
 			return result;
 		}
 
-		@Override
 		public boolean equals(Object obj) {
 			if (this == obj)
 				return true;
@@ -91,38 +122,6 @@ public class Trie implements Externalizable {
 				return false;
 			return true;
 		}
-
-		public char character;
-		public Node nextSibling;
-		public Node firstChild;
-		public String word;
-
-		public Node(char character) {
-			this.character = character;
-		}
-
-		public String toString() {
-			return "Node = {character:'" + this.character + "',word:'" + this.word + "'}";
-		}
-
-		public void print(int indent, StringBuffer buffer) {
-			for (int i = 0; i < indent; i++) {
-				buffer.append(" ");
-			}
-			buffer.append(toString());
-			buffer.append("\n");
-			if (this.firstChild != null) {
-				this.firstChild.print(indent + 2, buffer);
-			}
-			if (this.nextSibling != null) {
-//				for (int i = 0; i < indent; i++) {
-//					buffer.append(" ");
-//				}
-				this.nextSibling.print(indent, buffer);
-			}
-		}
-
-		// TODO: Implement equals and hashcode. This will help with validating the serialization mechanism.
 	}
 
 	private static final short LATEST_FORMAT_VERSION = 1;
@@ -130,6 +129,10 @@ public class Trie implements Externalizable {
 	private static final short FORMAT_INDICATOR_SIBLING = 2;
 	private static final short FORMAT_INDICATOR_LEAF = 3;
 
+	private static final short FORMAT_LOOKAT_CHILD = 2;
+	private static final short FORMAT_LOOKAT_SIBLING = 1;
+	private static final short FORMAT_LOOKAT_LEAF = 0;
+	
 	private Node root = new Node((char) 0);
 	private boolean longestMatchOption = true;
 
@@ -159,9 +162,7 @@ public class Trie implements Externalizable {
 	}
 
 	public String toString() {
-		StringBuffer buffer = new StringBuffer();
-		this.root.print(0, buffer);
-		return buffer.toString();
+		return this.root.print();
 	}
 
 	/**
@@ -270,38 +271,63 @@ public class Trie implements Externalizable {
 		this.longestMatchOption = longestMatchOption;
 	}
 
+	/**
+	 * 1 byte: Version of the protocol.
+	 * 1 byte: Command Sibling.
+	 * 2 byte: Character 0 (root node)
+	 * For each further node{
+	 * 1 byte: Command
+	 * 2 byte: Character
+	 * }
+	 * 
+	 */
 	public void write(DataOutputStream out) throws IOException {
-		out.writeShort(LATEST_FORMAT_VERSION);
-		Node stackElement = new Node((char) 0);
+		Node trieElement;
+
+		out.writeByte(LATEST_FORMAT_VERSION);
+//		out.writeByte(FORMAT_INDICATOR_SIBLING);
+
+		Node stackElement = new Node((char) FORMAT_LOOKAT_SIBLING);
 		stackElement.firstChild = this.root;
 		Node topElement = stackElement;
-		out.writeShort(FORMAT_INDICATOR_SIBLING);
-		while (topElement != null) {
-			// Write yourself in the stream
-			out.write(topElement.character);
-			// Handle child of Trie node
-			if (topElement.firstChild.firstChild != null) {
-				stackElement = new Node((char) 0);
-				stackElement.nextSibling = topElement;
-				stackElement.firstChild = topElement.firstChild.firstChild;
-				topElement = stackElement;
-				out.writeShort(FORMAT_INDICATOR_CHILD);
+		
+		while(topElement != null) {
+			// Look at element.
+			stackElement = topElement;
+			trieElement = stackElement.firstChild;
+			
+			if(stackElement.character == FORMAT_LOOKAT_CHILD) {
+				// Process child.
+				stackElement.character = 1;
+				if(trieElement.firstChild != null) {
+					stackElement = new Node((char)FORMAT_LOOKAT_CHILD);
+					stackElement.firstChild = trieElement.firstChild;
+					stackElement.nextSibling = topElement;
+					topElement = stackElement;
+					out.writeByte(FORMAT_INDICATOR_CHILD);
+					out.writeChar(stackElement.firstChild.character);
+				}
 				continue;
 			}
-			// Handle sibling
-			if (topElement.firstChild.nextSibling != null) {
-				topElement.firstChild = topElement.firstChild.nextSibling;
-				out.writeShort(FORMAT_INDICATOR_SIBLING);
+			if(stackElement.character == FORMAT_LOOKAT_SIBLING) {
+				// Process the sibling.
+				stackElement.character = FORMAT_LOOKAT_CHILD;
+				if(trieElement.nextSibling != null) {
+//					stackElement = new Node((char)FORMAT_LOOKAT_CHILD);
+					stackElement.firstChild = trieElement.nextSibling;
+//					stackElement.nextSibling = topElement;
+					topElement = stackElement;
+					out.writeByte(FORMAT_INDICATOR_SIBLING);
+					out.writeChar(stackElement.firstChild.character);
+				} else {
+					out.writeByte(FORMAT_INDICATOR_LEAF);
+					// Pop.
+					topElement.firstChild = null;
+					topElement = topElement.nextSibling;
+				}
 				continue;
-			}
-			out.writeShort(FORMAT_INDICATOR_LEAF);
-			topElement = topElement.nextSibling;
-			// Is the stack empty, then we are done.
-			if (topElement != null) {
-				topElement.firstChild = null;
 			}
 		}
-
 	}
 
 	/**
@@ -315,7 +341,7 @@ public class Trie implements Externalizable {
 		if (!(this.root.firstChild == null && this.root.nextSibling == null)) {
 			throw new IllegalStateException("This object is already initialized with words. Only an empty Trie object can be read into. Create an empty Trie object with 'new Trie()'");
 		}
-		short version = in.readShort();
+		short version = in.readByte();
 		if (version != LATEST_FORMAT_VERSION) {
 			throw new IOException("The format version of the input is '" + version + "'. Only version '" + LATEST_FORMAT_VERSION + "' is supported. Convert the input or implement the unsupported version.");
 		}
@@ -326,7 +352,7 @@ public class Trie implements Externalizable {
 		topElement.firstChild = new Node((char) 0);
 		short command;
 		while (topElement != null) {
-			command = in.readShort();
+			command = in.readByte();
 			if (command == FORMAT_INDICATOR_LEAF) {
 				// TODO: Poppen und child ausketten.
 				continue;
@@ -334,7 +360,7 @@ public class Trie implements Externalizable {
 
 			currentTrieCharacter = in.readChar();
 			currentTrieNode = new Node(currentTrieCharacter);
-			
+
 			Node stackElement = new Node((char) 0);
 			stackElement.firstChild = currentTrieNode;
 			stackElement.nextSibling = topElement;
@@ -383,6 +409,8 @@ public class Trie implements Externalizable {
 		return true;
 	}
 	
-	
+	Node getRootNode() {
+		return this.root;
+	}
 
 }

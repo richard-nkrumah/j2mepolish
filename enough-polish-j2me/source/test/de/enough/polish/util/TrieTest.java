@@ -1,5 +1,10 @@
 package de.enough.polish.util;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.LinkedList;
 
 import de.enough.polish.util.Trie.Node;
@@ -10,6 +15,7 @@ public class TrieTest extends TestCase {
 
 	private static final String[] SMILIES = new String[] { ":)", ":))", "XOXO", ":)V", ":-D", "=)", ";)", ":-X", ":-*", ":-P", ":\'-(", "T_T", "(stop)", "u_u", ":-b", "%-}", "(@-))", "(exciting1)", "(grin2)", "(kiss2)", "(x_x2)", "(nerd2)", "(music2)", "(on_fire2)", "(sick2)", "(crying2)", "(boo2)", "(ninja2)" };
 	private static final String LONGSEARCHTEXT = ":) kaslfkjsd fj ioasjfiose hfioashfsdiofh sio fhoiüg hgiodhgiodhg ag dighioghroighgoihfgoi hofhg oihjoighfd oigsdgfh afd :-P gfdsfg g (stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stopg gdf g fd gfd h lksdjf kld(stop)(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop(stop";
+	
 	protected LinkedList searchResults = new LinkedList();
 
 	private final class SearchResultConsumer implements Trie.TrieSearchConsumer {
@@ -139,7 +145,7 @@ public class TrieTest extends TestCase {
 		Trie trie = new Trie(SMILIES);
 
 		long timeStartTrie = System.currentTimeMillis();
-		for (int looper = 0; looper < 10000; looper++) {
+		for (int looper = 0; looper < 5000; looper++) {
 			trie.search(LONGSEARCHTEXT, trieSearchConsumer);
 		}
 		long timeEndTrie = System.currentTimeMillis();
@@ -159,10 +165,9 @@ public class TrieTest extends TestCase {
 
 	public void testNodeEquality() {
 		Trie.Node root1 = new Trie.Node((char) 0);
-		populateNode(root1, true, true, true, true, 3, 'A');
-		
+		populateNode(root1, true, true, 3, 'A');
 		Trie.Node root2 = new Trie.Node((char) 0);
-		populateNode(root2, true, true, true, true, 3, 'A');
+		populateNode(root2, true, true, 3, 'A');
 		
 		assertTrue(root1.equals(root2));
 	}
@@ -173,28 +178,113 @@ public class TrieTest extends TestCase {
 		assertTrue(trie1.equals(trie2));
 	}
 	
-	public void testTrieEqualityNegative() {
+	public void testTrieInequality() {
 		Trie trie1 = new Trie(new String[] {":-)",":-("});
 		Trie trie2 = new Trie(new String[] {":-)",":-"});
 		assertFalse(trie1.equals(trie2));
 	}
 
-	protected char populateNode(Trie.Node node, boolean addChild, boolean populateChild, boolean addSibling, boolean populateSibling, int level, char character) {
+	public void testNodeStructure() {
+		Node expectedRoot = new Node((char)0);
+		Node nodeA = new Node('A');
+		Node nodeB = new Node('B');
+		Node nodeC = new Node('C');
+		Node nodeD = new Node('D');
+		Node nodeE = new Node('E');
+		Node nodeF = new Node('F');
+		
+		nodeA.word = "A";
+		nodeC.word = "BC";
+		nodeD.word = "BD";
+		nodeE.word = "BE";
+		nodeF.word = "F";
+		
+		expectedRoot.nextSibling = nodeA;
+		nodeA.nextSibling = nodeB;
+		nodeB.firstChild = nodeC;
+		nodeB.nextSibling = nodeF;
+		nodeC.nextSibling = nodeD;
+		nodeD.nextSibling = nodeE;
+		
+		Trie trie = new Trie(new String[] {"A","BC","BD","BE","F"});
+		Node actualRootNode = trie.getRootNode();
+		assertEquals(expectedRoot,actualRootNode);
+		assertEquals(expectedRoot.print(),actualRootNode.print());
+	}
+	
+	public void testWrite() {
+		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+		DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream);
+		Trie trie = new Trie(new String[] {"A","BC","BD","BE","F"});
+		try {
+			trie.write(dataOutputStream);
+		} catch (IOException e) {
+			e.printStackTrace();
+			fail();
+		}
+		byte[] actualByteArray = byteArrayOutputStream.toByteArray();
+		byte[] expectedByteArray = new byte[] {1,2,0,65,2,0,66,1,0,67,2,0,68,2,0,69,3,2,0,70,3};
+		System.out.println(printByteArray(actualByteArray));
+		
+		assertEquals(expectedByteArray.length,actualByteArray.length);
+		for(int i = 0; i < expectedByteArray.length; i++) {
+			assertEquals(expectedByteArray[i], actualByteArray[i]);
+		}
+	}
+	
+	public void testReadWrite() {
+		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+		DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream);
+		Trie trie1 = new Trie(new String[] {":-)",":-("});
+		try {
+			trie1.write(dataOutputStream);
+		} catch (IOException e) {
+			e.printStackTrace();
+			fail();
+			return;
+		}
+		byte[] byteArray = byteArrayOutputStream.toByteArray();
+		ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArray);
+		DataInputStream dataInputStream = new DataInputStream(byteArrayInputStream);
+		Trie trie2 = new Trie();
+		try {
+			trie2.read(dataInputStream);
+		} catch (IOException e) {
+			e.printStackTrace();
+			fail();
+			return;
+		}
+		assertTrue(trie1.equals(trie2));
+	}
+	
+	private String printByteArray(byte[] byteArray) {
+		StringBuffer buffer = new StringBuffer();
+		for(int i = 0; i < byteArray.length; i++) {
+			buffer.append(Integer.toString(byteArray[i]));
+			buffer.append(" ");
+		}
+		buffer.append("\n");
+		return buffer.toString();
+	}
+	
+	protected char populateNode(Trie.Node node, boolean addChild, boolean addSibling, int level, char character) {
 		if (level == 0) {
 			return character;
 		}
+//		if(node == null) {
+//			return character;
+//		}
 		char nextCharacter = character;
 		if (addChild) {
 			node.firstChild = new Trie.Node(nextCharacter);
-		}
-		if (populateChild) {
-			nextCharacter = populateNode(node.firstChild, true, true, true, true, level - 1, (char) (nextCharacter + 1));
+			nextCharacter = populateNode(node.firstChild, addChild, addSibling, level - 1, (char) (nextCharacter + 1));
 		}
 		if (addSibling) {
+//			if(level%2 != 0) {
+//				addSibling = false;
+//			}
 			node.nextSibling = new Trie.Node((char) (nextCharacter));
-		}
-		if (populateSibling) {
-			nextCharacter = populateNode(node.nextSibling, true, true, true, true, level - 1, (char) (nextCharacter + 1));
+			nextCharacter = populateNode(node.nextSibling, addChild, addSibling, level - 1, (char) (nextCharacter + 1));
 		}
 		return nextCharacter;
 	}
